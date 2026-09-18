@@ -16,7 +16,7 @@ from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.ui.styles import DARK_STYLE, OVERLAY_STYLE
 from voice_typing.ui.settings import SettingsWindow
-from voice_typing.ui.overlay import OverlayWindow
+from voice_typing.ui.overlay import OverlayWindow, DEFAULT_OVERLAY_THEME
 from voice_typing.recorder import Recorder
 
 
@@ -88,6 +88,8 @@ class VoiceTypingApp(QObject):
         self._settings = SettingsWindow(self._config, self._hotkey)
         self._settings.engine_changed.connect(self._on_engine_changed)
         self._overlay = OverlayWindow()
+        self._overlay.set_theme(self._config.get("overlay_style", DEFAULT_OVERLAY_THEME))
+        self._settings.overlay_style_changed.connect(self._overlay.set_theme)
         self._overlay.show()
 
     def _create_engine(self):
@@ -99,8 +101,6 @@ class VoiceTypingApp(QObject):
             )
         elif engine_type == "volcengine":
             self._engine = VolcengineEngine(
-                app_id=self._config.get("volc_asr_app_id", ""),
-                access_token=self._config.get("volc_asr_access_token", ""),
                 api_key=self._config.get("volc_asr_api_key", ""),
                 resource_id=self._config.get(
                     "volc_asr_resource_id", "volc.seedasr.sauc.duration"
@@ -594,6 +594,12 @@ def main():
 
     import signal
     signal.signal(signal.SIGINT, lambda sig, frame: app.quit())
+    # Qt 事件循环跑在 C++ 里，期间 Python 解释器拿不到执行权，上面的 SIGINT
+    # 处理器永远不会被调用（终端按 Ctrl+C 毫无反应）。用一个空转定时器周期性
+    # 交还控制权，挂起的信号才有机会被处理。
+    sigint_timer = QTimer()
+    sigint_timer.timeout.connect(lambda: None)
+    sigint_timer.start(200)
 
     voice_app = VoiceTypingApp()
     # 带 --minimized/--hidden 参数（如开机自启）时静默启动，只显示托盘，不弹主窗口

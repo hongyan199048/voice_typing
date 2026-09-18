@@ -29,21 +29,15 @@ class VolcengineProtocolError(RuntimeError):
     """火山 ASR 服务返回的协议错误。"""
 
 
-def _build_auth_headers(*, api_key: str, app_id: str, access_token: str,
-                        resource_id: str) -> dict:
-    """同时兼容新版 API Key 和旧版 App ID + Access Token 鉴权。"""
-    headers = {
+def _build_auth_headers(*, api_key: str, resource_id: str) -> dict:
+    """豆包语音控制台签发的 API Key 鉴权。"""
+    return {
+        "X-Api-Key": api_key,
         "X-Api-Resource-Id": resource_id or DEFAULT_RESOURCE_ID,
         "X-Api-Request-Id": str(uuid.uuid4()),
         "X-Api-Connect-Id": str(uuid.uuid4()),
         "X-Api-Sequence": "-1",
     }
-    if api_key:
-        headers["X-Api-Key"] = api_key
-    else:
-        headers["X-Api-App-Key"] = app_id
-        headers["X-Api-Access-Key"] = access_token
-    return headers
 
 
 def _build_request_config(*, boosting_table_id: str,
@@ -65,6 +59,8 @@ def _build_request_config(*, boosting_table_id: str,
             "enable_nonstream": True,
             "enable_itn": True,
             "enable_punc": True,
+            # 语义顺滑：服务端删「呃/嗯/那个」等口水词、修口吃重复
+            "enable_ddc": True,
             "result_type": "single",
         },
     }
@@ -145,11 +141,8 @@ class VolcengineEngine(BaseEngine):
 
     name = "豆包流式语音识别 2.0"
 
-    def __init__(self, app_id: str = "", access_token: str = "",
-                 api_key: str = "", resource_id: str = DEFAULT_RESOURCE_ID,
+    def __init__(self, api_key: str = "", resource_id: str = DEFAULT_RESOURCE_ID,
                  boosting_table_id: str = "", correct_words: dict = None):
-        self._app_id = app_id
-        self._access_token = access_token
         self._api_key = api_key
         self._resource_id = resource_id or DEFAULT_RESOURCE_ID
         self._boosting_table_id = boosting_table_id  # 控制台热词表 ID（识别偏置）
@@ -162,10 +155,10 @@ class VolcengineEngine(BaseEngine):
         self._ws_done = None
 
     def initialize(self) -> bool:
-        return bool(self._api_key or (self._app_id and self._access_token))
+        return bool(self._api_key)
 
     def is_available(self) -> bool:
-        return bool(self._api_key or (self._app_id and self._access_token))
+        return bool(self._api_key)
 
     def set_text_callback(self, cb):
         self._text_callback = cb
@@ -184,8 +177,6 @@ class VolcengineEngine(BaseEngine):
     async def _ws_session(self):
         headers = _build_auth_headers(
             api_key=self._api_key,
-            app_id=self._app_id,
-            access_token=self._access_token,
             resource_id=self._resource_id,
         )
         try:

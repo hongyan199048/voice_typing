@@ -1,9 +1,56 @@
 """屏幕下方浮窗 — 实时显示语音转写文字"""
 
 import random
-from PyQt5.QtCore import Qt, QTimer, QRect, QSize, QPropertyAnimation, QEasingCurve, pyqtProperty
-from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QFontMetrics, QFont
+from PyQt5.QtCore import (Qt, QTimer, QRect, QRectF, QSize, QPropertyAnimation,
+                          QEasingCurve, pyqtProperty)
+from PyQt5.QtGui import (QPainter, QColor, QBrush, QPen, QFontMetrics, QFont,
+                         QLinearGradient)
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QApplication
+
+
+# 浮窗外观主题。全部是纯绘制参数，加一档只是往字典里加一行。
+# 注意：X11 拿不到真正的背景模糊（需要合成器支持，Qt 无跨平台 API），
+# "glass" 是用高透明度 + 顶部高光模拟的，背后内容不会真的被模糊。
+OVERLAY_THEMES = {
+    "glass": {
+        "label": "玻璃 — 高透明，顶部高光",
+        "fill": (32, 38, 34, 150),
+        "border": (255, 255, 255, 64),
+        "border_w": 1.4,
+        "highlight": True,
+    },
+    "minimal": {
+        "label": "极简 — 深色胶囊，细描边",
+        "fill": (18, 18, 18, 238),
+        "border": (255, 255, 255, 26),
+        "border_w": 1.0,
+        "highlight": False,
+    },
+    "neon": {
+        "label": "霓虹 — 绿色描边 + 外发光",
+        "fill": (10, 13, 11, 236),
+        "border": (34, 197, 94, 225),
+        "border_rec": (239, 68, 68, 225),
+        "border_w": 1.6,
+        "highlight": False,
+        "glow": (34, 197, 94),
+        "glow_rec": (239, 68, 68),
+        "glow_alpha": 46,
+        "glow_layers": 7,
+    },
+    "aurora": {
+        "label": "极光 — 渐变描边",
+        "fill": (16, 19, 17, 232),
+        "grad_border": [(34, 197, 94, 230), (56, 229, 190, 230), (34, 197, 94, 230)],
+        "grad_border_rec": [(239, 68, 68, 230), (245, 158, 11, 230), (239, 68, 68, 230)],
+        "border_w": 1.6,
+        "highlight": True,
+        "glow": (34, 197, 94),
+        "glow_alpha": 22,
+        "glow_layers": 5,
+    },
+}
+DEFAULT_OVERLAY_THEME = "glass"
 
 
 class StatusIndicator(QWidget):
@@ -102,6 +149,9 @@ class OverlayWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
 
+        # 外观主题
+        self._theme = DEFAULT_OVERLAY_THEME
+
         # 拖拽相关
         self._dragging = False
         self._drag_position = None
@@ -131,7 +181,9 @@ class OverlayWindow(QWidget):
         self._content_layout.addStretch()
 
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(16, 12, 16, 12)
+        main_layout.setContentsMargins(
+            16 + self.PAD, 12 + self.PAD, 16 + self.PAD, 12 + self.PAD
+        )
         main_layout.addLayout(self._content_layout)
 
         # 动画
@@ -140,7 +192,7 @@ class OverlayWindow(QWidget):
         self._size_animation.setEasingCurve(QEasingCurve.OutCubic)
 
         # 初始化为最小尺寸（只显示绿色圆球），先设尺寸再定位
-        self.resize(56, 48)
+        self.resize(56 + 2 * self.PAD, 48 + 2 * self.PAD)
         self._center_on_screen()
 
     def _set_idle_size(self):
@@ -151,20 +203,25 @@ class OverlayWindow(QWidget):
         """录音状态：红色圆球 + 波形"""
         self._animate_to_size(100, 48)
 
-    # 圆点中心距窗口左边缘的固定偏移（16 margin + 24/2 indicator）
-    DOT_CENTER_X = 28
+    # 窗口四周留白，给外发光留绘制空间（Qt 画不出窗口边界外）
+    PAD = 10
+    # 圆点中心距窗口左边缘的固定偏移（PAD + 16 margin + 24/2 indicator）
+    DOT_CENTER_X = PAD + 28
 
     def _animate_to_size(self, width: int, height: int):
-        """平滑过渡到新尺寸，以红/绿圆点中心为锚点，圆点屏幕位置保持不变"""
+        """平滑过渡到新尺寸。入参是内容尺寸，窗口在四周各加 PAD。
+        以红/绿圆点中心为锚点，圆点屏幕位置保持不变。"""
+        win_w = width + 2 * self.PAD
+        win_h = height + 2 * self.PAD
         current_rect = self.geometry()
 
         dot_x = current_rect.x() + self.DOT_CENTER_X
         dot_y = current_rect.y() + current_rect.height() // 2
 
         x = dot_x - self.DOT_CENTER_X
-        y = dot_y - height // 2
+        y = dot_y - win_h // 2
 
-        end_rect = QRect(x, y, width, height)
+        end_rect = QRect(x, y, win_w, win_h)
         self._size_animation.setStartValue(current_rect)
         self._size_animation.setEndValue(end_rect)
         self._size_animation.start()
@@ -176,13 +233,73 @@ class OverlayWindow(QWidget):
         y = screen.bottom() - self.height() - 60
         self.move(x, y)
 
+    def set_theme(self, name: str):
+        """切换外观主题，立即重绘"""
+        if name in OVERLAY_THEMES:
+            self._theme = name
+            self.update()
+
     def paintEvent(self, event):
-        """绘制半透明圆角背景"""
+        """按主题分层绘制：外发光 → 填充 → 顶部高光 → 描边"""
+        theme = OVERLAY_THEMES.get(self._theme, OVERLAY_THEMES[DEFAULT_OVERLAY_THEME])
+        recording = self._indicator._recording
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(QBrush(QColor(20, 20, 20, 230)))
+
+        cap = QRectF(self.rect().adjusted(self.PAD, self.PAD, -self.PAD, -self.PAD))
+        radius = cap.height() / 2  # 真胶囊：圆角跟随高度
+
+        # ① 外发光：由内向外若干圈递减透明度
+        glow = theme.get("glow_rec" if recording else "glow") or theme.get("glow")
+        if glow:
+            layers = theme.get("glow_layers", 6)
+            peak = theme.get("glow_alpha", 40)
+            painter.setPen(Qt.NoPen)
+            for i in range(layers, 0, -1):
+                spread = i * (self.PAD / layers)
+                alpha = int(peak * (layers - i + 1) / layers / layers * 2)
+                if alpha <= 0:
+                    continue
+                ring = cap.adjusted(-spread, -spread, spread, spread)
+                painter.setBrush(QBrush(QColor(*glow, alpha)))
+                painter.drawRoundedRect(ring, radius + spread, radius + spread)
+
+        # ② 填充
         painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.rect(), 24, 24)
+        painter.setBrush(QBrush(QColor(*theme["fill"])))
+        painter.drawRoundedRect(cap, radius, radius)
+
+        # ③ 顶部高光（玻璃质感）
+        if theme.get("highlight"):
+            grad = QLinearGradient(cap.topLeft(), cap.bottomLeft())
+            grad.setColorAt(0.0, QColor(255, 255, 255, 40))
+            grad.setColorAt(0.45, QColor(255, 255, 255, 10))
+            grad.setColorAt(1.0, QColor(255, 255, 255, 0))
+            painter.setBrush(QBrush(grad))
+            painter.drawRoundedRect(cap, radius, radius)
+
+        # ④ 描边：纯色或渐变
+        width = theme.get("border_w", 1.0)
+        stops = theme.get("grad_border_rec" if recording else "grad_border") \
+            or theme.get("grad_border")
+        if stops:
+            grad = QLinearGradient(cap.topLeft(), cap.topRight())
+            for i, color in enumerate(stops):
+                grad.setColorAt(i / max(1, len(stops) - 1), QColor(*color))
+            pen = QPen(QBrush(grad), width)
+        else:
+            color = theme.get("border_rec" if recording else "border") \
+                or theme.get("border")
+            if not color:
+                return
+            pen = QPen(QColor(*color), width)
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(pen)
+        inset = width / 2
+        painter.drawRoundedRect(
+            cap.adjusted(inset, inset, -inset, -inset), radius, radius
+        )
 
     def flash_yellow(self):
         """按键检测到时闪黄色，用于延迟诊断"""
@@ -192,6 +309,7 @@ class OverlayWindow(QWidget):
     def start_recording(self):
         """开始录音：圆球变红 + 窗口扩展开启动画 + 波形渐现"""
         self._indicator.set_recording(True)
+        self.update()
         self._text_received = False
         self._text_label.hide()
         self._set_recording_size()
@@ -205,6 +323,7 @@ class OverlayWindow(QWidget):
     def stop_recording(self):
         """停止录音：圆球变绿 + 隐藏波形"""
         self._indicator.set_recording(False)
+        self.update()
         self._waveform.stop()
 
     MAX_LABEL_WIDTH = 600

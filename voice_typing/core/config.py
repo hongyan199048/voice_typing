@@ -9,10 +9,9 @@ CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 DEFAULT_CONFIG = {
     "engine": "alibaba",            # "alibaba" | "volcengine"
     "alibaba_api_key": "",          # 阿里云 DashScope API Key（ASR + 润色共用）
-    "volc_asr_app_id": "",          # 火山引擎 ASR App ID
-    "volc_asr_access_token": "",   # 火山引擎 ASR Access Token
-    "volc_asr_api_key": "",         # 新版豆包语音控制台 API Key（与方舟/千问 Key 独立）
+    "volc_asr_api_key": "",         # 豆包语音控制台 API Key（X-Api-Key，与方舟 Key 独立）
     "volc_asr_resource_id": "volc.seedasr.sauc.duration",  # 豆包流式语音识别 2.0 小时版
+    "overlay_style": "glass",       # 浮窗外观：glass / minimal / neon / aurora
     "hotkey": ["ctrl", "alt", "v"],
     "first_run": True,
     "custom_vocabulary": [],        # 自定义热词列表：["CUDA", "GitHub", "Python"]

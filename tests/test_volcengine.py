@@ -1,7 +1,11 @@
 import gzip
 import json
+import os
 import struct
+import sys
 import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from voice_typing.engine.volcengine import (
     DEFAULT_RESOURCE_ID,
@@ -30,24 +34,12 @@ class VolcengineEngineProtocolTests(unittest.TestCase):
     def test_new_api_key_auth_is_independent(self):
         headers = _build_auth_headers(
             api_key="new-key",
-            app_id="old-app",
-            access_token="old-token",
             resource_id=DEFAULT_RESOURCE_ID,
         )
         self.assertEqual(headers["X-Api-Key"], "new-key")
         self.assertNotIn("X-Api-App-Key", headers)
         self.assertNotIn("X-Api-Access-Key", headers)
         self.assertEqual(headers["X-Api-Sequence"], "-1")
-
-    def test_legacy_auth_remains_supported(self):
-        headers = _build_auth_headers(
-            api_key="",
-            app_id="old-app",
-            access_token="old-token",
-            resource_id=DEFAULT_RESOURCE_ID,
-        )
-        self.assertEqual(headers["X-Api-App-Key"], "old-app")
-        self.assertEqual(headers["X-Api-Access-Key"], "old-token")
 
     def test_request_uses_two_pass_recognition_and_inline_hotwords(self):
         config = _build_request_config(

@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
 from voice_typing.core.config import load_config, save_config, build_correct_words
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
+from voice_typing.ui.overlay import OVERLAY_THEMES, DEFAULT_OVERLAY_THEME
 from voice_typing.core.vocabulary import sync_vocabulary
 
 
@@ -219,6 +220,7 @@ class SettingsWindow(QWidget):
     """VoiceType 主窗口 — 侧边导航 + 多页面"""
 
     engine_changed = pyqtSignal(object)
+    overlay_style_changed = pyqtSignal(str)
 
     def __init__(self, config, hotkey_manager):
         super().__init__()
@@ -330,11 +332,11 @@ class SettingsWindow(QWidget):
     def _build_home_page(self):
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(40, 36, 40, 36)
-        layout.setSpacing(16)
+        layout.setContentsMargins(40, 32, 40, 32)
+        layout.setSpacing(14)
 
         title = QLabel("使用统计")
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0;")
+        title.setObjectName("page-title")
         layout.addWidget(title)
 
         layout.addSpacing(8)
@@ -345,16 +347,17 @@ class SettingsWindow(QWidget):
         cards_layout.setContentsMargins(0, 0, 0, 0)
         cards_layout.setSpacing(16)
 
+        # 只有首项用绿色强调，其余走白色——单一强调色是成熟设置页的共同做法
         stats_defs = [
-            ("total_seconds", "使用时长", "分钟", "#22c55e"),
-            ("total_characters", "输入字数", "字", "#3b82f6"),
-            ("total_sessions", "录音次数", "次", "#f59e0b"),
-            ("efficiency", "输入效率", "字/分钟", "#a78bfa"),
+            ("total_seconds", "使用时长", "分钟", True),
+            ("total_characters", "输入字数", "字", False),
+            ("total_sessions", "录音次数", "次", False),
+            ("efficiency", "输入效率", "字/分钟", False),
         ]
 
         self._stat_labels = {}
-        for key, label_text, unit, color in stats_defs:
-            card = self._make_stat_card(key, label_text, unit, color)
+        for key, label_text, unit, accent in stats_defs:
+            card = self._make_stat_card(key, label_text, unit, accent)
             cards_layout.addWidget(card, 1)
 
         layout.addWidget(cards_widget)
@@ -379,22 +382,26 @@ class SettingsWindow(QWidget):
 
         return page
 
-    def _make_stat_card(self, key, label_text, unit, color):
+    def _make_stat_card(self, key, label_text, unit, accent=False):
         card = QGroupBox("")
-        card.setStyleSheet("QGroupBox { border: none; border-radius: 16px; background: #141414; padding: 20px; }")
+        card.setStyleSheet(
+            "QGroupBox { border: 1px solid #1e1e1e; border-radius: 14px;"
+            " background: #141414; padding: 18px; }"
+        )
         layout = QVBoxLayout(card)
-        layout.setSpacing(8)
+        layout.setSpacing(6)
 
         label = QLabel(label_text)
         label.setObjectName("stat-label")
         layout.addWidget(label)
 
         value_label = QLabel("--")
-        value_label.setStyleSheet(f"font-size: 21pt; font-weight: bold; color: {color};")
+        value_label.setObjectName("stat-value")
+        value_label.setProperty("accent", "true" if accent else "false")
         layout.addWidget(value_label)
 
         unit_label = QLabel(unit)
-        unit_label.setStyleSheet("font-size: 10pt; color: #666;")
+        unit_label.setObjectName("stat-label")
         layout.addWidget(unit_label)
 
         self._stat_labels[key] = value_label
@@ -446,7 +453,7 @@ class SettingsWindow(QWidget):
 
         title_row = QHBoxLayout()
         title = QLabel("历史记录")
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0;")
+        title.setObjectName("page-title")
         title_row.addWidget(title)
         title_row.addStretch()
 
@@ -467,8 +474,8 @@ class SettingsWindow(QWidget):
         self._history_list.setStyleSheet("""
             QListWidget {
                 background: #141414;
-                border: none;
-                border-radius: 12px;
+                border: 1px solid #1e1e1e;
+                border-radius: 14px;
                 padding: 8px;
             }
         """)
@@ -535,7 +542,7 @@ class SettingsWindow(QWidget):
 
         title_row = QHBoxLayout()
         title = QLabel("自定义词典")
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0;")
+        title.setObjectName("page-title")
         title_row.addWidget(title)
         title_row.addStretch()
 
@@ -553,8 +560,8 @@ class SettingsWindow(QWidget):
         self._dict_list.setStyleSheet("""
             QListWidget {
                 background: #141414;
-                border: none;
-                border-radius: 12px;
+                border: 1px solid #1e1e1e;
+                border-radius: 14px;
                 padding: 8px;
             }
         """)
@@ -689,58 +696,50 @@ class SettingsWindow(QWidget):
         layout.setSpacing(16)
 
         title = QLabel("设置")
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0;")
+        title.setObjectName("page-title")
         layout.addWidget(title)
 
         # ① 语音识别 (ASR)
-        asr_card = QGroupBox("① 语音识别 (ASR)")
+        asr_card = QGroupBox("语音识别")
         asr_v = QVBoxLayout(asr_card)
-        asr_v.setSpacing(8)
-
-        engine_label = QLabel("识别引擎")
-        engine_label.setObjectName("subtitle")
-        asr_v.addWidget(engine_label)
+        asr_v.setSpacing(12)
 
         self._engine_combo = _DarkComboBox()
         self._engine_combo.addItem("阿里云 Paraformer（云端）", "alibaba")
         self._engine_combo.addItem("豆包流式语音识别 2.0（云端）", "volcengine")
         self._engine_combo.currentIndexChanged.connect(self._on_engine_preview)
-        asr_v.addWidget(self._engine_combo)
+        asr_v.addWidget(self._field(
+            "识别引擎", self._engine_combo,
+            "决定语音送到哪家云端转写。切换引擎不影响下方的润色设置。",
+        ))
+        asr_v.addWidget(self._divider())
 
         self._api_status = QLabel("")
         self._api_status.setObjectName("status")
 
         # 阿里云 Key（仅识别用）
-        self._alibaba_api_widget = QWidget()
-        alibaba_api_layout = QVBoxLayout(self._alibaba_api_widget)
-        alibaba_api_layout.setContentsMargins(0, 0, 0, 0)
         self._api_wrapper, self._api_input = self._make_password_input(
-            "阿里云 DashScope API Key（用于 Paraformer 识别）", self._api_status
+            "sk-...", self._api_status
         )
-        alibaba_api_layout.addWidget(self._api_wrapper)
+        self._alibaba_api_widget = self._field(
+            "DashScope API Key", self._api_wrapper,
+            "阿里云控制台签发，仅用于 Paraformer 识别。",
+        )
         asr_v.addWidget(self._alibaba_api_widget)
 
-        # 豆包 ASR 凭证（来自豆包语音控制台，与方舟润色 Key、千问 Key 均不共用）
+        # 豆包 ASR 凭证（来自豆包语音控制台，与方舟润色 Key 不共用）
         self._volc_api_widget = QWidget()
+        self._volc_api_widget.setObjectName("field")
         volc_layout = QVBoxLayout(self._volc_api_widget)
         volc_layout.setContentsMargins(0, 0, 0, 0)
-        volc_layout.setSpacing(8)
+        volc_layout.setSpacing(12)
 
-        api_key_wrapper, self._volc_api_key_input = self._make_password_input(
-            "新版控制台 API Key（X-Api-Key，优先使用）"
-        )
-        volc_layout.addWidget(api_key_wrapper)
-
-        legacy_hint = QLabel("旧版控制台可不填 API Key，改填下面的 App ID 和 Access Token。")
-        legacy_hint.setObjectName("subtitle")
-        legacy_hint.setWordWrap(True)
-        volc_layout.addWidget(legacy_hint)
-
-        app_id_wrapper, self._volc_app_id_input = self._make_password_input("旧版 App ID（X-Api-App-Key）")
-        volc_layout.addWidget(app_id_wrapper)
-
-        access_token_wrapper, self._volc_access_token_input = self._make_password_input("旧版 Access Token（X-Api-Access-Key）")
-        volc_layout.addWidget(access_token_wrapper)
+        api_key_wrapper, self._volc_api_key_input = self._make_password_input("X-Api-Key")
+        volc_layout.addWidget(self._field(
+            "豆包语音控制台 API Key", api_key_wrapper,
+            "在豆包语音控制台签发，与方舟大模型的 Key 不是同一个。",
+        ))
+        volc_layout.addWidget(self._divider())
 
         self._volc_resource_combo = _DarkComboBox()
         self._volc_resource_combo.addItem(
@@ -759,64 +758,78 @@ class SettingsWindow(QWidget):
             "1.0 并发版（兼容旧应用）",
             "volc.bigasr.sauc.concurrent",
         )
-        volc_layout.addWidget(self._volc_resource_combo)
+        volc_layout.addWidget(self._field(
+            "资源版本", self._volc_resource_combo,
+            "对应你在控制台开通的计费方式，选错会鉴权失败。",
+        ))
+        volc_layout.addWidget(self._divider())
 
         self._volc_boosting_input = QLineEdit()
-        self._volc_boosting_input.setPlaceholderText("热词表 ID（可选，控制台创建，提升术语识别）")
-        volc_layout.addWidget(self._volc_boosting_input)
+        self._volc_boosting_input.setPlaceholderText("留空则不启用")
+        volc_layout.addWidget(self._field(
+            "热词表 ID（可选）", self._volc_boosting_input,
+            "控制台创建的热词表，做识别偏置。词典页的本地词库会另行随请求发送。",
+        ))
 
         asr_v.addWidget(self._volc_api_widget)
         asr_v.addWidget(self._api_status)
         layout.addWidget(asr_card)
 
         # ② 文本润色 (LLM)
-        polish_llm_card = QGroupBox("② 文本润色 (LLM)")
+        polish_llm_card = QGroupBox("文本润色")
         polish_llm_layout = QVBoxLayout(polish_llm_card)
-        polish_llm_layout.setSpacing(8)
-
-        provider_label = QLabel("润色模型（与识别引擎完全独立）")
-        provider_label.setObjectName("subtitle")
-        polish_llm_layout.addWidget(provider_label)
+        polish_llm_layout.setSpacing(12)
 
         self._polish_provider_combo = _DarkComboBox()
         self._polish_provider_combo.addItem("关闭润色（直接输出识别原文）", "off")
         self._polish_provider_combo.addItem("DeepSeek", "deepseek")
         self._polish_provider_combo.addItem("智谱 GLM", "glm")
         self._polish_provider_combo.addItem("MiniMax", "minimax")
-        polish_llm_layout.addWidget(self._polish_provider_combo)
+        polish_llm_layout.addWidget(self._field(
+            "润色模型", self._polish_provider_combo,
+            "识别完成后交给大模型清洗口语。与上方识别引擎完全独立。",
+        ))
+
+        self._polish_off_hint = QLabel("识别结果不经大模型处理，直接粘贴（仍会应用词库别名替换）。")
+        self._polish_off_hint.setObjectName("field-hint")
+        self._polish_off_hint.setWordWrap(True)
+        polish_llm_layout.addWidget(self._polish_off_hint)
+
+        self._polish_key_divider = self._divider()
+        polish_llm_layout.addWidget(self._polish_key_divider)
 
         # 每家一个 Key 输入框，按所选模型显隐
         self._polish_key_widgets = {}
         self._polish_key_inputs = {}
-        for provider, label in (
-            ("deepseek", "DeepSeek API Key"),
-            ("glm", "智谱 GLM API Key"),
-            ("minimax", "MiniMax API Key"),
+        for provider, label, hint in (
+            ("deepseek", "DeepSeek API Key", "deepseek.com 控制台签发。"),
+            ("glm", "智谱 GLM API Key", "bigmodel.cn 控制台签发。"),
+            ("minimax", "MiniMax API Key", "minimaxi.com 控制台签发。"),
         ):
-            widget = QWidget()
-            wlayout = QVBoxLayout(widget)
-            wlayout.setContentsMargins(0, 0, 0, 0)
             wrapper, field = self._make_password_input(label)
-            wlayout.addWidget(wrapper)
-            polish_llm_layout.addWidget(widget)
-            self._polish_key_widgets[provider] = widget
+            box = self._field(label, wrapper, hint)
+            polish_llm_layout.addWidget(box)
+            self._polish_key_widgets[provider] = box
             self._polish_key_inputs[provider] = field
 
-        self._polish_off_hint = QLabel("识别结果不经大模型处理，直接粘贴（仍会应用词库别名替换）。")
-        self._polish_off_hint.setObjectName("subtitle")
-        self._polish_off_hint.setWordWrap(True)
-        polish_llm_layout.addWidget(self._polish_off_hint)
-
-        self._realtime_polish_check = QCheckBox("录音过程中提前润色（更快出结果，可能多花 token）")
-        polish_llm_layout.addWidget(self._realtime_polish_check)
+        self._realtime_polish_check = QCheckBox("录音过程中提前润色")
+        self._realtime_polish_row = self._field(
+            "提前润色", self._realtime_polish_check,
+            "边说边润色，松开快捷键后出字更快，代价是可能多消耗 token。",
+        )
+        polish_llm_layout.addWidget(self._divider())
+        polish_llm_layout.addWidget(self._realtime_polish_row)
 
         self._polish_provider_combo.currentIndexChanged.connect(self._on_polish_provider_preview)
 
         # 润色强度
-        polish_llm_layout.addSpacing(4)
+        polish_llm_layout.addWidget(self._divider())
         strength_label = QLabel("润色强度")
-        strength_label.setObjectName("subtitle")
+        strength_label.setObjectName("field-label")
         polish_llm_layout.addWidget(strength_label)
+        strength_hint = QLabel("决定大模型改动原话的尺度，越重改得越多。")
+        strength_hint.setObjectName("field-hint")
+        polish_llm_layout.addWidget(strength_hint)
 
         self._polish_group = QButtonGroup(self)
         self._polish_light = QRadioButton("轻度 — 仅删明显语气词，一字不改")
@@ -830,9 +843,33 @@ class SettingsWindow(QWidget):
         polish_llm_layout.addWidget(self._polish_strong)
         layout.addWidget(polish_llm_card)
 
+        # 浮窗外观
+        overlay_card = QGroupBox("浮窗外观")
+        ov_layout = QVBoxLayout(overlay_card)
+        ov_layout.setSpacing(12)
+
+        self._overlay_style_combo = _DarkComboBox()
+        for name, theme in OVERLAY_THEMES.items():
+            self._overlay_style_combo.addItem(theme["label"], name)
+        # 选中即时生效，方便直接在屏幕上比对
+        self._overlay_style_combo.currentIndexChanged.connect(
+            lambda _: self.overlay_style_changed.emit(
+                self._overlay_style_combo.currentData()
+            )
+        )
+        ov_layout.addWidget(self._field(
+            "外观样式", self._overlay_style_combo,
+            "切换即时生效，可直接看屏幕下方的浮窗对比。"
+            "玻璃档是高透明度模拟，X11 下拿不到真正的背景模糊。",
+        ))
+        layout.addWidget(overlay_card)
+
         # ③ 快捷键
-        hotkey_card = QGroupBox("③ 快捷键")
+        hotkey_card = QGroupBox("快捷键")
         hlayout = QVBoxLayout(hotkey_card)
+        hk_hint = QLabel("按住说话，松开结束。支持组合键，也支持单键长按。")
+        hk_hint.setObjectName("field-hint")
+        hlayout.addWidget(hk_hint)
         hrow = QHBoxLayout()
         self._hotkey_btn = QPushButton(self._hotkey_display())
         self._hotkey_btn.setMinimumHeight(44)
@@ -846,7 +883,7 @@ class SettingsWindow(QWidget):
         layout.addWidget(hotkey_card)
 
         # ④ 开机启动
-        autostart_card = QGroupBox("④ 开机启动")
+        autostart_card = QGroupBox("启动与运行")
         alayout_auto = QVBoxLayout(autostart_card)
         self._autostart_check = QCheckBox("开机自动启动 VoiceType")
         alayout_auto.addWidget(self._autostart_check)
@@ -901,9 +938,38 @@ class SettingsWindow(QWidget):
 
     # ---------- 引擎 ----------
 
+    @staticmethod
+    def _field(label_text, widget, hint=""):
+        """一个设置项：标题 + 可选说明 + 控件。
+        密码框填完只剩一串圆点，没有标题就认不出是哪一项。"""
+        box = QWidget()
+        box.setObjectName("field")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        lab = QLabel(label_text)
+        lab.setObjectName("field-label")
+        v.addWidget(lab)
+        if hint:
+            h = QLabel(hint)
+            h.setObjectName("field-hint")
+            h.setWordWrap(True)
+            v.addWidget(h)
+        v.addWidget(widget)
+        return box
+
+    @staticmethod
+    def _divider():
+        """卡片内设置项之间的细分隔线"""
+        line = QFrame()
+        line.setObjectName("divider")
+        line.setFrameShape(QFrame.HLine)
+        return line
+
     def _make_password_input(self, placeholder, status_label=None):
         """创建带眼睛显示/隐藏切换的密码输入框"""
         wrapper = QWidget()
+        wrapper.setObjectName("input-row")
         layout = QHBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
@@ -952,8 +1018,6 @@ class SettingsWindow(QWidget):
             engine.initialize()
         elif engine_type == "volcengine":
             engine = VolcengineEngine(
-                app_id=self._config.get("volc_asr_app_id", ""),
-                access_token=self._config.get("volc_asr_access_token", ""),
                 api_key=self._config.get("volc_asr_api_key", ""),
                 resource_id=self._config.get(
                     "volc_asr_resource_id", "volc.seedasr.sauc.duration"
@@ -980,8 +1044,6 @@ class SettingsWindow(QWidget):
             self._engine_combo.setCurrentIndex(idx)
 
         self._api_input.setText(self._config.get("alibaba_api_key", ""))
-        self._volc_app_id_input.setText(self._config.get("volc_asr_app_id", ""))
-        self._volc_access_token_input.setText(self._config.get("volc_asr_access_token", ""))
         self._volc_api_key_input.setText(self._config.get("volc_asr_api_key", ""))
         resource_id = self._config.get(
             "volc_asr_resource_id", "volc.seedasr.sauc.duration"
@@ -1002,6 +1064,12 @@ class SettingsWindow(QWidget):
         pidx = self._polish_provider_combo.findData(provider)
         if pidx >= 0:
             self._polish_provider_combo.setCurrentIndex(pidx)
+
+        ov_idx = self._overlay_style_combo.findData(
+            self._config.get("overlay_style", DEFAULT_OVERLAY_THEME)
+        )
+        if ov_idx >= 0:
+            self._overlay_style_combo.setCurrentIndex(ov_idx)
 
         self._refresh_credential_visibility()
 
@@ -1035,18 +1103,18 @@ class SettingsWindow(QWidget):
         for name, widget in self._polish_key_widgets.items():
             widget.setVisible(provider == name)
         self._polish_off_hint.setVisible(provider == "off")
-        self._realtime_polish_check.setVisible(provider != "off")
+        self._polish_key_divider.setVisible(provider != "off")
+        self._realtime_polish_row.setVisible(provider != "off")
 
     def _on_apply(self):
         engine_type = self._engine_combo.currentData()
         self._config["engine"] = engine_type
         self._config["alibaba_api_key"] = self._api_input.text()
-        self._config["volc_asr_app_id"] = self._volc_app_id_input.text()
-        self._config["volc_asr_access_token"] = self._volc_access_token_input.text()
         self._config["volc_asr_api_key"] = self._volc_api_key_input.text().strip()
         self._config["volc_asr_resource_id"] = self._volc_resource_combo.currentData()
         self._config["volc_boosting_table_id"] = self._volc_boosting_input.text().strip()
         self._config["polish_provider"] = self._polish_provider_combo.currentData()
+        self._config["overlay_style"] = self._overlay_style_combo.currentData()
 
         autostart = self._autostart_check.isChecked()
         self._config["autostart"] = autostart
