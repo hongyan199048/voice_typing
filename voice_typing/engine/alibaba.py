@@ -13,6 +13,7 @@ class ParaformerCallback(RecognitionCallback):
     def __init__(self):
         super().__init__()
         self.final_text = ""
+        self.last_preview = ""  # 最近一次未定稿预览，停止时兜底防尾字丢失
         self._sentences = []  # 累积所有句子
         self._on_text = None
 
@@ -33,9 +34,11 @@ class ParaformerCallback(RecognitionCallback):
                 if not any(sid == sentence_id for sid, _ in self._sentences):
                     self._sentences.append((sentence_id, text))
                     self.final_text = "".join(t for _, t in self._sentences)
+                self.last_preview = ""  # 句子已定稿，清空兜底
             else:
-                # 实时预览（不保存）
+                # 实时预览（不保存，但记录用于停止时兜底）
                 preview = "".join(t for _, t in self._sentences) + text
+                self.last_preview = preview
                 if self._on_text:
                     self._on_text(preview)
                 return
@@ -109,4 +112,9 @@ class AlibabaEngine(BaseEngine):
         self._running = False
         if self._recognition:
             self._recognition.stop()
-        return self._callback.final_text.strip() if self._callback else ""
+        if not self._callback:
+            return ""
+        final = self._callback.final_text.strip()
+        preview = self._callback.last_preview.strip()
+        # 若最后一句未定稿（尾字未进 final_text），用预览兜底，防止丢字
+        return preview if len(preview) > len(final) else final

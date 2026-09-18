@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceType — Pixel Logo</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #141414;
+    --green: #22c55e;
+    --green-dim: #16a34a;
+    --text: #f0f0f0;
+    --muted: #666;
+    --border: #1a1a1a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 64px 24px 80px;
+    min-height: 100vh;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 56px;
+  }
+
+  /* ── Main logo grid ── */
+  .logo-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 10px);
+    grid-template-rows: repeat(16, 10px);
+    gap: 1px;
+  }
+  .logo-grid .px { border-radius: 2px; }
+  .px-bright { background: var(--green); }
+  .px-dim   { background: var(--green-dim); }
+  .px-off   { background: transparent; }
+
+  .logo-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 64px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 64px;
+  }
+
+  /* scale variants */
+  .scale-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .scale-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .logo-sm  .logo-grid { grid-template-columns: repeat(16, 6px);  grid-template-rows: repeat(16, 6px);  gap: 0.5px; }
+  .logo-xs  .logo-grid { grid-template-columns: repeat(16, 4px);  grid-template-rows: repeat(16, 4px);  gap: 0px; }
+  .logo-sm  .logo-grid .px, .logo-xs .logo-grid .px { border-radius: 1px; }
+
+  /* in-context: app header mockup */
+  .mockup {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 420px;
+  }
+  .mockup-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mockup-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .mockup-nav {
+    margin-left: auto;
+    display: flex;
+    gap: 20px;
+  }
+  .mockup-nav span {
+    font-size: 11px;
+    color: #999;
+  }
+  .mockup-nav span.active { color: var(--green); }
+
+  /* sidebar mockup */
+  .sidebar-mock {
+    background: #0a0a0a;
+    border-right: 1px solid var(--border);
+    border-radius: 16px 0 0 16px;
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 200px;
+    min-height: 320px;
+  }
+  .sidebar-mock .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .sidebar-mock .brand-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .sidebar-mock .brand-ver {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: -2px;
+  }
+  .sidebar-mock .nav-item {
+    font-size: 11px;
+    color: #999;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+  .sidebar-mock .nav-item.active {
+    background: var(--border);
+    color: var(--green);
+  }
+
+  h2 {
+    font-size: 12px;
+    font-weight: 500;
+    color: #555;
+    letter-spacing: 0.5px;
+    margin-bottom: 32px;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); width: 100%; margin: 48px 0; }
+</style>
+</head>
+<body>
+
+<p class="eyebrow">VoiceType · Pixel Soundwave Logo</p>
+
+<!-- ═══ Main presentation ═══ -->
+<div class="logo-row">
+
+  <!-- Large -->
+  <div class="scale-group">
+    <div class="logo-grid" id="logo-main"></div>
+    <span class="scale-label">128×128 px</span>
+  </div>
+
+  <!-- Medium (tray icon) -->
+  <div class="scale-group logo-sm">
+    <div class="logo-grid" id="logo-md"></div>
+    <span class="scale-label">64×64 · 托盘图标</span>
+  </div>
+
+  <!-- Small -->
+  <div class="scale-group logo-xs">
+    <div class="logo-grid" id="logo-xs"></div>
+    <span class="scale-label">32×32 · 侧边栏</span>
+  </div>
+
+</div>
+
+<!-- ═══ In-context mockups ═══ -->
+<h2>应用场景预览</h2>
+
+<div class="logo-row" style="gap:32px;">
+
+  <!-- Header bar -->
+  <div class="mockup">
+    <div class="mockup-brand">
+      <div class="logo-xs"><div class="logo-grid" id="logo-header"></div></div>
+      <span class="mockup-name">VoiceType</span>
+    </div>
+    <div class="mockup-nav">
+      <span>使用统计</span>
+      <span>历史记录</span>
+      <span class="active">设置</span>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar-mock">
+    <div class="brand-row">
+      <div class="logo-xs"><div class="logo-grid" id="logo-sidebar"></div></div>
+      <div>
+        <div class="brand-name">VoiceType</div>
+        <div class="brand-ver">v1.4.2-dev</div>
+      </div>
+    </div>
+    <div class="nav-item active">主界面</div>
+    <div class="nav-item">历史记录</div>
+    <div class="nav-item">词典</div>
+    <div class="nav-item">设置</div>
+  </div>
+
+</div>
+
+<hr>
+
+<!-- ═══ Grid breakdown ═══ -->
+<h2>像素网格详解（16×16）</h2>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;justify-content:center;">
+  <div class="logo-grid" id="logo-breakdown"></div>
+  <div style="background:var(--card);border-radius:12px;padding:20px 24px;font-size:11px;line-height:1.8;color:#aaa;max-width:320px;">
+    <div><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;margin-right:8px;"></span> 主色 <code style="color:var(--green);">#22C55E</code> — 声波竖条</div>
+    <div><span style="display:inline-block;width:10px;height:10px;background:var(--green-dim);border-radius:2px;margin-right:8px;"></span> 辅色 <code style="color:var(--green-dim);">#16A34A</code> — 基线 · 粒子</div>
+    <div style="margin-top:12px;color:#666;">
+      5 根等宽竖条（各 2px）<br>
+      高度 3 · 6 · 10 · 6 · 3（钟形对称）<br>
+      条间距 1px · 整体居中<br>
+      顶部声波粒子 · 底部统一基线
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Refined Symmetric Logo ──
+// 16×16 grid. 0=off, 1=bright(#22c55e), 2=dim(#16a34a)
+//
+// Design:
+//   5 equal-width bars (2px each), 1px gap, centered
+//   Heights: 3, 6, 10, 6, 3  → perfect bell curve
+//   All bars rest on row 12, grow upward
+//   Floor line at row 13
+//   Sparkle particles above tallest bars
+
+function buildGrid() {
+  const g = Array.from({length: 16}, () => new Array(16).fill(0));
+
+  // Bar definitions: [startCol, height, rows from bottom]
+  // All bars are 2px wide, end at row 12 (0-indexed)
+  const bars = [
+    { col: 1,  h: 3 },   // shortest, outer
+    { col: 4,  h: 6 },
+    { col: 7,  h: 10 },  // tallest, center
+    { col: 10, h: 6 },
+    { col: 13, h: 3 },
+  ];
+
+  for (const {col, h} of bars) {
+    const topRow = 12 - h + 1;  // e.g. h=10 → topRow=3
+    for (let dx = 0; dx < 2; dx++) {
+      for (let r = topRow; r <= 12; r++) {
+        g[r][col + dx] = 1;  // bright
+      }
+    }
+    // Cap: top row dim for bars h>=6 (adds depth)
+    if (h >= 6) {
+      for (let dx = 0; dx < 2; dx++) {
+        g[topRow][col + dx] = h >= 10 ? 1 : 2;
+      }
+    }
+  }
+
+  // Floor line (row 13) — spans cols 0–15
+  for (let c = 0; c < 16; c++) {
+    g[13][c] = c >= 1 && c <= 14 ? 2 : 0;
+  }
+
+  // Sound particles above center bar
+  g[0][7] = 2;
+  g[0][8] = 2;
+  g[1][7] = 1;
+  g[1][8] = 1;
+
+  // Tiny flanking particles above bar 2 and bar 4
+  g[2][4] = 2;
+  g[2][5] = 2;
+  g[2][10] = 2;
+  g[2][11] = 2;
+
+  return g;
+}
+
+function renderGrid(containerId, grid) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  for (let r = 0; r < 16; r++) {
+    for (let c = 0; c < 16; c++) {
+      const px = document.createElement('div');
+      px.className = 'px ' + (grid[r][c] === 1 ? 'px-bright' : grid[r][c] === 2 ? 'px-dim' : 'px-off');
+      el.appendChild(px);
+    }
+  }
+}
+
+const grid = buildGrid();
+
+// Render all instances
+['logo-main', 'logo-md', 'logo-xs', 'logo-header', 'logo-sidebar', 'logo-breakdown'].forEach(id => {
+  renderGrid(id, grid);
+});
+</script>
+
+</body>
+</html>

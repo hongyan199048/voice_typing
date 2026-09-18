@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>VoiceType Logo · 留白系列</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #141414;
+    --border: #1f1f1f;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 48px 32px 80px;
+  }
+  header { max-width: 1280px; margin: 0 auto 40px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 720px; }
+
+  .grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color .18s, transform .18s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .preview-large {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0a0a0a;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .preview-large svg { width: 70%; height: 70%; }
+
+  .preview-row {
+    display: flex; gap: 12px; align-items: center; justify-content: center;
+    margin-bottom: 16px; padding: 12px;
+    background: #0a0a0a; border-radius: 10px;
+  }
+  .ico-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ico { background: var(--card); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .ico-64 { width: 64px; height: 64px; }
+  .ico-32 { width: 32px; height: 32px; }
+  .ico-16 { width: 16px; height: 16px; }
+  .ico svg { width: 100%; height: 100%; }
+  .label { color: var(--muted); font-size: 11px; }
+
+  .head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .num {
+    background: transparent; color: var(--accent);
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  }
+  .cn { font-size: 22px; font-weight: 700; letter-spacing: .15em; }
+  .en { color: var(--muted); font-size: 12px; font-style: italic; }
+  .quote {
+    color: var(--accent); font-size: 12px; line-height: 1.6;
+    margin: 10px 0 8px; font-style: italic; opacity: .9;
+  }
+  .desc { color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  .ref {
+    max-width: 1280px;
+    margin: 0 auto 24px;
+    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .ref-ico { width: 56px; height: 56px; flex-shrink: 0; }
+  .ref-ico svg { width: 100%; height: 100%; border-radius: 8px; }
+  .ref-text { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .ref-text b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>留白系列 · <span>四款微调</span></h1>
+  <p>都基于"几乎闭合的圆 + 缺口"的核心结构，但在比例、缺口位置、笔触、伴生元素上做不同取舍。每个方案保留"沉默即意义"的核心隐喻，但氛围各异。</p>
+</header>
+
+<div class="ref">
+  <div class="ref-ico">
+    <svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="6" fill="none" stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round"/><circle cx="64" cy="64" r="3" fill="#22c55e"/></svg>
+  </div>
+  <div class="ref-text"><b>参考原型 · 07 留白</b>　环 + 缺口 + 中心点。下方四个方案均在此基础上微调。</div>
+</div>
+
+<div class="grid">
+
+  <!-- A. 空 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="38" stroke="#22c55e" stroke-width="4" fill="none"
+                stroke-dasharray="220 18" stroke-dashoffset="-9" stroke-linecap="round"
+                transform="rotate(-60 64 64)"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="38" stroke="#22c55e" stroke-width="4" fill="none" stroke-dasharray="220 18" stroke-dashoffset="-9" stroke-linecap="round" transform="rotate(-60 64 64)"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="38" stroke="#22c55e" stroke-width="7" fill="none" stroke-dasharray="220 22" stroke-dashoffset="-11" stroke-linecap="round" transform="rotate(-60 64 64)"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="42" stroke="#22c55e" stroke-width="14" fill="none" stroke-dasharray="240 32" stroke-dashoffset="-16" stroke-linecap="round" transform="rotate(-60 64 64)"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">A</span><span class="cn">空</span><span class="en">Void</span></div>
+    <div class="quote">"圆是说出来的，缺口是没说出来的。"</div>
+    <div class="desc">去掉中心点，环本身收薄。缺口移到右上 60°，像未完成的句号。比原型更克制，更接近日本"圆相 (ensō)"的禅意——空即满。</div>
+  </div>
+
+  <!-- B. 应 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="42" stroke="#22c55e" stroke-width="3" fill="none"
+                stroke-dasharray="250 20" stroke-dashoffset="-10" stroke-linecap="round"
+                opacity="0.4"/>
+        <circle cx="64" cy="64" r="26" stroke="#22c55e" stroke-width="4" fill="none"
+                stroke-dasharray="150 18" stroke-dashoffset="-9" stroke-linecap="round"
+                transform="rotate(180 64 64)"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="42" stroke="#22c55e" stroke-width="3" fill="none" stroke-dasharray="250 20" stroke-dashoffset="-10" stroke-linecap="round" opacity="0.4"/><circle cx="64" cy="64" r="26" stroke="#22c55e" stroke-width="4" fill="none" stroke-dasharray="150 18" stroke-dashoffset="-9" stroke-linecap="round" transform="rotate(180 64 64)"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="42" stroke="#22c55e" stroke-width="5" fill="none" stroke-dasharray="250 24" stroke-dashoffset="-12" stroke-linecap="round" opacity="0.4"/><circle cx="64" cy="64" r="24" stroke="#22c55e" stroke-width="7" fill="none" stroke-dasharray="140 18" stroke-dashoffset="-9" stroke-linecap="round" transform="rotate(180 64 64)"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="42" stroke="#22c55e" stroke-width="8" fill="none" stroke-dasharray="240 36" stroke-dashoffset="-18" stroke-linecap="round" opacity="0.4"/><circle cx="64" cy="64" r="20" stroke="#22c55e" stroke-width="12" fill="none" stroke-dasharray="110 24" stroke-dashoffset="-12" stroke-linecap="round" transform="rotate(180 64 64)"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">B</span><span class="cn">应</span><span class="en">Echo</span></div>
+    <div class="quote">"一句话出去，半句话回来。"</div>
+    <div class="desc">双环嵌套，外环淡、内环实。两个缺口位于相反方向——意指"声音 → 回响"的循环。比原型更有层次和动势，仍保持留白的内核。</div>
+  </div>
+
+  <!-- C. 笔 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="9" fill="none"
+                stroke-dasharray="195 35" stroke-dashoffset="-17" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="36" stroke="#0d0d0d" stroke-width="2" fill="none"
+                stroke-dasharray="195 35" stroke-dashoffset="-17" stroke-linecap="round"
+                transform="rotate(178 64 64)" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="9" fill="none" stroke-dasharray="195 35" stroke-dashoffset="-17" stroke-linecap="round"/><circle cx="64" cy="64" r="36" stroke="#0d0d0d" stroke-width="2" fill="none" stroke-dasharray="195 35" stroke-dashoffset="-17" stroke-linecap="round" transform="rotate(178 64 64)" opacity="0.6"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="12" fill="none" stroke-dasharray="190 40" stroke-dashoffset="-20" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="40" stroke="#22c55e" stroke-width="20" fill="none" stroke-dasharray="200 60" stroke-dashoffset="-30" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">C</span><span class="cn">笔</span><span class="en">Brushstroke</span></div>
+    <div class="quote">"一笔写下来，再不回头。"</div>
+    <div class="desc">环改为单笔粗壮笔触，内侧叠一层细暗线模拟"枯笔"质感。缺口宽阔，圆头收笔。最像一笔画完的圆相书法，有人手温度。16px 下气场最足。</div>
+  </div>
+
+  <!-- D. 言 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="5" fill="none"
+                stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round"
+                transform="rotate(90 64 64)"/>
+        <line x1="64" y1="60" x2="64" y2="46" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="64" cy="40" r="2.5" fill="#22c55e" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="5" fill="none" stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round" transform="rotate(90 64 64)"/><line x1="64" y1="60" x2="64" y2="46" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/><circle cx="64" cy="40" r="2.5" fill="#22c55e" opacity="0.6"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="8" fill="none" stroke-dasharray="200 34" stroke-dashoffset="-17" stroke-linecap="round" transform="rotate(90 64 64)"/><line x1="64" y1="58" x2="64" y2="44" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="40" stroke="#22c55e" stroke-width="15" fill="none" stroke-dasharray="220 50" stroke-dashoffset="-25" stroke-linecap="round" transform="rotate(90 64 64)"/><line x1="64" y1="58" x2="64" y2="40" stroke="#22c55e" stroke-width="15" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">D</span><span class="cn">言</span><span class="en">Utterance</span></div>
+    <div class="quote">"从沉默的容器里，浮出一个字。"</div>
+    <div class="desc">缺口转到正上方，环内一道短竖+顶端余韵小点，像一缕气息从开口升起。环 = 静默的容器，短线 = 被说出的"一个字"。语意比原型更明确。</div>
+  </div>
+
+</div>
+
+<div style="max-width:1280px;margin:48px auto 0;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">
+  四个方向：<b style="color:var(--text)">A 空</b> 最克制 / <b style="color:var(--text)">B 应</b> 最有层次 / <b style="color:var(--text)">C 笔</b> 最有人味 / <b style="color:var(--text)">D 言</b> 语意最明。<br>
+  告诉我编号（或可继续组合，如"C 的笔触 + D 的开口"），我就把它做成 SVG / PyQt5 落地资源。
+</div>
+
+</body>
+</html>

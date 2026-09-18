@@ -11,13 +11,17 @@ DEFAULT_CONFIG = {
     "alibaba_api_key": "",          # 阿里云 DashScope API Key（ASR + 润色共用）
     "volc_asr_app_id": "",          # 火山引擎 ASR App ID
     "volc_asr_access_token": "",   # 火山引擎 ASR Access Token
+    "volc_asr_api_key": "",         # 新版豆包语音控制台 API Key（与方舟/千问 Key 独立）
+    "volc_asr_resource_id": "volc.seedasr.sauc.duration",  # 豆包流式语音识别 2.0 小时版
     "hotkey": ["ctrl", "alt", "v"],
     "first_run": True,
     "custom_vocabulary": [],        # 自定义热词列表：["CUDA", "GitHub", "Python"]
     "phrase_id": "",                # 阿里云热词表ID（UUID，由VocabularyService创建）
     "polish_strength": "medium",    # 润色强度：light / medium / strong
+    "polish_provider": "",          # 润色模型：qwen / deepseek / doubao（空=按已配置自动选）
     "doubao_api_key": "",           # 豆包 ARK API Key
     "doubao_endpoint_id": "",       # 豆包推理接入点 ID（ep-xxxxxxxxxxxx）
+    "volc_boosting_table_id": "",   # 火山 ASR 热词表 ID（控制台创建，做识别偏置）
     "stats": {
         "total_seconds": 0,          # 累计录音秒数
         "total_characters": 0,       # 累计识别字符数
@@ -47,3 +51,20 @@ def save_config(config):
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def build_correct_words(config):
+    """从词库构建火山 ASR 内联错词映射 {别名: 正词}（仅对填了别名的词条生效）"""
+    mapping = {}
+    for item in config.get("custom_vocabulary", []):
+        if not isinstance(item, dict):
+            continue
+        term = item.get("term", "")
+        alias_str = item.get("alias", "")
+        if not term or not alias_str:
+            continue
+        for alias in alias_str.split(","):
+            alias = alias.strip()
+            if alias:
+                mapping[alias] = term
+    return mapping

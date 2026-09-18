@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>VoiceType Logo Concepts — Abstract</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #141414;
+    --border: #1f1f1f;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 48px 32px 80px;
+  }
+  header { max-width: 1280px; margin: 0 auto 40px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 720px; }
+
+  .grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color .18s, transform .18s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .preview-large {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0a0a0a;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .preview-large svg { width: 70%; height: 70%; }
+
+  .preview-row {
+    display: flex; gap: 12px; align-items: center; justify-content: center;
+    margin-bottom: 16px; padding: 12px;
+    background: #0a0a0a; border-radius: 10px;
+  }
+  .ico-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ico { background: var(--card); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .ico-64 { width: 64px; height: 64px; }
+  .ico-32 { width: 32px; height: 32px; }
+  .ico-16 { width: 16px; height: 16px; }
+  .ico svg { width: 100%; height: 100%; }
+  .label { color: var(--muted); font-size: 11px; }
+
+  .head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .num {
+    background: transparent; color: var(--accent);
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    padding: 2px 0;
+  }
+  .cn { font-size: 20px; font-weight: 700; }
+  .en { color: var(--muted); font-size: 12px; font-style: italic; }
+  .quote {
+    color: var(--accent); font-size: 12px; line-height: 1.6;
+    margin: 10px 0 8px; font-style: italic; opacity: .9;
+  }
+  .desc { color: var(--muted); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VoiceType · <span>抽象方案</span></h1>
+  <p>不再使用麦克风、波形、光标这些"器物符号"，转而表达声音转化为文字的"中间态"——共鸣、结晶、呼吸、跃迁。每个方案附带语意诠释，让 logo 自带故事感。</p>
+</header>
+
+<div class="grid">
+
+  <!-- 1. 共鸣 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="40" cy="88" r="6" fill="#22c55e"/>
+        <path d="M 40 88 A 28 28 0 0 1 68 60" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85"/>
+        <path d="M 40 88 A 44 44 0 0 1 84 44" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.55"/>
+        <path d="M 40 88 A 60 60 0 0 1 100 28" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.25"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="40" cy="88" r="6" fill="#22c55e"/><path d="M 40 88 A 28 28 0 0 1 68 60" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85"/><path d="M 40 88 A 44 44 0 0 1 84 44" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.55"/><path d="M 40 88 A 60 60 0 0 1 100 28" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.25"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="40" cy="88" r="8" fill="#22c55e"/><path d="M 40 88 A 28 28 0 0 1 68 60" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.85"/><path d="M 40 88 A 44 44 0 0 1 84 44" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.55"/><path d="M 40 88 A 60 60 0 0 1 100 28" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.25"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="40" cy="88" r="12" fill="#22c55e"/><path d="M 40 88 A 36 36 0 0 1 76 52" stroke="#22c55e" stroke-width="9" fill="none" stroke-linecap="round" opacity="0.7"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">01</span><span class="cn">回响</span><span class="en">Resonance</span></div>
+    <div class="quote">"一颗石子落入静水，涟漪是它的回声。"</div>
+    <div class="desc">一个落点 + 三层渐隐的弧线，从角落向外扩展。表达的不是声波本身，而是"声音存在过的证据"。绿色由实到虚，暗示从输入到回响的衰减。</div>
+  </div>
+
+  <!-- 2. 结晶 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <g stroke="#22c55e" stroke-width="2.5" stroke-linejoin="round" fill="none">
+          <path d="M 64 24 L 96 48 L 84 96 L 44 96 L 32 48 Z"/>
+          <path d="M 64 24 L 64 96 M 32 48 L 84 96 M 96 48 L 44 96 M 32 48 L 96 48"/>
+        </g>
+        <circle cx="64" cy="60" r="3" fill="#22c55e"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g stroke="#22c55e" stroke-width="2.5" stroke-linejoin="round" fill="none"><path d="M 64 24 L 96 48 L 84 96 L 44 96 L 32 48 Z"/><path d="M 64 24 L 64 96 M 32 48 L 84 96 M 96 48 L 44 96 M 32 48 L 96 48"/></g><circle cx="64" cy="60" r="3" fill="#22c55e"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g stroke="#22c55e" stroke-width="4" stroke-linejoin="round" fill="none"><path d="M 64 24 L 96 48 L 84 96 L 44 96 L 32 48 Z"/><path d="M 64 24 L 64 96 M 32 48 L 96 48"/></g></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 64 20 L 100 48 L 86 100 L 42 100 L 28 48 Z" stroke="#22c55e" stroke-width="8" stroke-linejoin="round" fill="none"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">02</span><span class="cn">结晶</span><span class="en">Crystallize</span></div>
+    <div class="quote">"声音原本无形，文字是它的晶体。"</div>
+    <div class="desc">五边形晶体几何 + 内部对角线 + 中心一点光。无定形的语音"结晶"为有结构的文字。冷峻、克制、带矿物质感，适合长期作为品牌符号。</div>
+  </div>
+
+  <!-- 3. 气韵 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <path d="M 32 96 Q 38 50 64 50 Q 90 50 96 32"
+              stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <circle cx="32" cy="96" r="5" fill="#22c55e"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 32 96 Q 38 50 64 50 Q 90 50 96 32" stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="32" cy="96" r="5" fill="#22c55e"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 32 96 Q 38 50 64 50 Q 90 50 96 32" stroke="#22c55e" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="32" cy="96" r="7" fill="#22c55e"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 28 100 Q 36 48 64 48 Q 92 48 100 28" stroke="#22c55e" stroke-width="16" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">03</span><span class="cn">气韵</span><span class="en">Breath</span></div>
+    <div class="quote">"言出于气，气止于形。"</div>
+    <div class="desc">一笔流转的弧线，起于角落实点（呼吸的起点），终于另一角的开放（文字的延展）。东方水墨笔意，极简到只剩一笔。16px 仍是一条清晰的曲线。</div>
+  </div>
+
+  <!-- 4. 门 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <rect x="30" y="32" width="6" height="64" rx="3" fill="#22c55e"/>
+        <rect x="92" y="32" width="6" height="64" rx="3" fill="#22c55e"/>
+        <path d="M 30 36 Q 64 20 98 36" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <circle cx="48" cy="64" r="2.5" fill="#22c55e" opacity="0.5"/>
+        <circle cx="64" cy="64" r="3.5" fill="#22c55e"/>
+        <circle cx="80" cy="64" r="2.5" fill="#22c55e" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="30" y="32" width="6" height="64" rx="3" fill="#22c55e"/><rect x="92" y="32" width="6" height="64" rx="3" fill="#22c55e"/><path d="M 30 36 Q 64 20 98 36" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="48" cy="64" r="2.5" fill="#22c55e" opacity="0.5"/><circle cx="64" cy="64" r="3.5" fill="#22c55e"/><circle cx="80" cy="64" r="2.5" fill="#22c55e" opacity="0.5"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="30" y="32" width="8" height="64" rx="4" fill="#22c55e"/><rect x="90" y="32" width="8" height="64" rx="4" fill="#22c55e"/><path d="M 30 36 Q 64 18 98 36" stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="64" cy="64" r="5" fill="#22c55e"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="26" y="28" width="14" height="72" rx="7" fill="#22c55e"/><rect x="88" y="28" width="14" height="72" rx="7" fill="#22c55e"/><path d="M 26 32 Q 64 14 102 32" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">04</span><span class="cn">间</span><span class="en">Threshold</span></div>
+    <div class="quote">"两根柱子之间，是声音通过的瞬间。"</div>
+    <div class="desc">两根立柱 + 上方拱形 + 中央一点穿越。借鉴了"鸟居"和"门"的形意——一个从一种存在形式跨入另一种的门槛。哲学性最强。</div>
+  </div>
+
+  <!-- 5. 跃迁 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <g fill="#22c55e">
+          <circle cx="22" cy="42" r="2" opacity="0.4"/>
+          <circle cx="32" cy="78" r="2.5" opacity="0.5"/>
+          <circle cx="40" cy="56" r="3" opacity="0.7"/>
+          <circle cx="26" cy="98" r="2" opacity="0.35"/>
+          <circle cx="50" cy="38" r="2.5" opacity="0.6"/>
+        </g>
+        <path d="M 62 36 Q 70 64 62 92" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-dasharray="2 3" opacity="0.5"/>
+        <g fill="#22c55e">
+          <circle cx="78" cy="36" r="3.5"/>
+          <circle cx="98" cy="36" r="3.5"/>
+          <circle cx="78" cy="56" r="3.5"/>
+          <circle cx="98" cy="56" r="3.5"/>
+          <circle cx="78" cy="76" r="3.5"/>
+          <circle cx="98" cy="76" r="3.5"/>
+          <circle cx="78" cy="96" r="3.5"/>
+          <circle cx="98" cy="96" r="3.5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g fill="#22c55e"><circle cx="22" cy="42" r="2" opacity="0.4"/><circle cx="32" cy="78" r="2.5" opacity="0.5"/><circle cx="40" cy="56" r="3" opacity="0.7"/><circle cx="26" cy="98" r="2" opacity="0.35"/><circle cx="50" cy="38" r="2.5" opacity="0.6"/></g><g fill="#22c55e"><circle cx="78" cy="36" r="3.5"/><circle cx="98" cy="36" r="3.5"/><circle cx="78" cy="56" r="3.5"/><circle cx="98" cy="56" r="3.5"/><circle cx="78" cy="76" r="3.5"/><circle cx="98" cy="76" r="3.5"/><circle cx="78" cy="96" r="3.5"/><circle cx="98" cy="96" r="3.5"/></g></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g fill="#22c55e"><circle cx="22" cy="42" r="3" opacity="0.5"/><circle cx="40" cy="56" r="4" opacity="0.8"/><circle cx="32" cy="88" r="3" opacity="0.5"/></g><g fill="#22c55e"><circle cx="80" cy="42" r="5"/><circle cx="100" cy="42" r="5"/><circle cx="80" cy="64" r="5"/><circle cx="100" cy="64" r="5"/><circle cx="80" cy="86" r="5"/><circle cx="100" cy="86" r="5"/></g></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="32" cy="64" r="10" fill="#22c55e"/><g fill="#22c55e"><circle cx="78" cy="42" r="9"/><circle cx="102" cy="42" r="9"/><circle cx="78" cy="86" r="9"/><circle cx="102" cy="86" r="9"/></g></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">05</span><span class="cn">跃迁</span><span class="en">Transition</span></div>
+    <div class="quote">"无序的呢喃，跃为有序的字符。"</div>
+    <div class="desc">左侧散乱的小点（语音的无序）→ 右侧整齐的点阵（文字的有序）。中间隐约的虚线提示"穿越"。一种"信息从混沌走向秩序"的瞬间。</div>
+  </div>
+
+  <!-- 6. 螺 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <path d="M 64 64 m 0 -4 a 4 4 0 1 1 -0.1 0 m 0.1 4 a 8 8 0 1 0 7.5 8 m -7.5 -8 a 16 16 0 1 1 16 -16 m 0 16 a 28 28 0 1 0 -28 28 m 28 -28 a 40 40 0 1 1 -40 -40"
+              stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 64 64 m 0 -4 a 4 4 0 1 1 -0.1 0 m 0.1 4 a 8 8 0 1 0 7.5 8 m -7.5 -8 a 16 16 0 1 1 16 -16 m 0 16 a 28 28 0 1 0 -28 28 m 28 -28 a 40 40 0 1 1 -40 -40" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 64 64 m 0 -4 a 4 4 0 1 1 -0.1 0 m 0.1 4 a 10 10 0 1 0 10 10 m -10 -10 a 22 22 0 1 1 22 -22 m 0 22 a 36 36 0 1 0 -36 36" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 64 64 m 0 -8 a 8 8 0 1 1 -0.1 0 m 0.1 8 a 24 24 0 1 0 24 24 m -24 -24 a 40 40 0 1 1 40 -40" stroke="#22c55e" stroke-width="10" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">06</span><span class="cn">螺旋</span><span class="en">Spiral</span></div>
+    <div class="quote">"语言是从内向外旋出来的。"</div>
+    <div class="desc">单线从中心向外的螺旋。无起点也无终点——既是声音从口而出的轨迹，也是思绪展开的形状。带斐波那契气质，永恒而有机。</div>
+  </div>
+
+  <!-- 7. 留白 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="6" fill="none"
+                stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="#22c55e"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="6" fill="none" stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round"/><circle cx="64" cy="64" r="3" fill="#22c55e"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="36" stroke="#22c55e" stroke-width="9" fill="none" stroke-dasharray="200 30" stroke-dashoffset="-15" stroke-linecap="round"/><circle cx="64" cy="64" r="5" fill="#22c55e"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="40" stroke="#22c55e" stroke-width="16" fill="none" stroke-dasharray="220 36" stroke-dashoffset="-18" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">07</span><span class="cn">留白</span><span class="en">Silence</span></div>
+    <div class="quote">"语言的意义，藏在沉默的那一段里。"</div>
+    <div class="desc">几乎闭合的圆环，留一道缺口；中心一点。圆代表完整的句子，缺口代表"停顿"——而真正让话语成为话语的，正是这停顿。最东方、最禅意。</div>
+  </div>
+
+  <!-- 8. 双弧 -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <path d="M 32 32 Q 48 64 32 96" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M 96 32 Q 80 64 96 96" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <line x1="58" y1="64" x2="70" y2="64" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 32 32 Q 48 64 32 96" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M 96 32 Q 80 64 96 96" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="58" y1="64" x2="70" y2="64" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 28 28 Q 48 64 28 100" stroke="#22c55e" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M 100 28 Q 80 64 100 100" stroke="#22c55e" stroke-width="9" fill="none" stroke-linecap="round"/><line x1="56" y1="64" x2="72" y2="64" stroke="#22c55e" stroke-width="9" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><path d="M 24 24 Q 50 64 24 104" stroke="#22c55e" stroke-width="16" fill="none" stroke-linecap="round"/><path d="M 104 24 Q 78 64 104 104" stroke="#22c55e" stroke-width="16" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="head"><span class="num">08</span><span class="cn">引文</span><span class="en">Quotation</span></div>
+    <div class="quote">"括号之内，是某人说过的话。"</div>
+    <div class="desc">两道相向的弧，中间一段短横线（被引用的内容、说话本身）。从西文「""」引号的形态出发，提炼为"声音被书写下来"的最简符号。语意精确而克制。</div>
+  </div>
+
+</div>
+
+<div style="max-width:1280px;margin:48px auto 0;text-align:center;color:var(--muted);font-size:13px;line-height:1.8;">
+  告诉我倾向哪个编号（也可组合，例如"02 结晶 + 07 留白的缺口"）。<br>
+  确认后我会把 SVG 转成 PyQt5 QPainter 代码 / 导出 PNG，替换托盘和窗口图标。
+</div>
+
+</body>
+</html>

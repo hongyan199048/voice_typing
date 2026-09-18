@@ -13,7 +13,7 @@
 - 🎤 **实时语音转写** —— 说话时屏幕底部浮窗同步显示
 - ⌨️ **自动粘贴** —— 松开快捷键，文字直接落到当前光标位置
 - 🔥 **全局快捷键** —— 支持「组合键」与「单键长按」两种触发模式（默认 `Ctrl+Alt+V`）
-- ☁️ **双云端引擎** —— 阿里云 Paraformer / 火山引擎 BigModel，任选其一
+- ☁️ **双云端引擎** —— 阿里云 Paraformer / 豆包流式语音识别 2.0，任选其一
 - 🪄 **大模型润色** —— 自动清洗口语、补标点，三档强度可调（Qwen-Plus / 豆包）
 - 📒 **自定义词库** —— 别名替换，专有名词不再识别错
 - 🎨 **暗黑极简界面** —— 设置窗口 + 可拖拽实时浮窗
@@ -62,10 +62,10 @@ python main.py        # 或：python -m voice_typing
 
 首次运行会打开设置窗口：
 
-1. **选择引擎** —— 阿里云 Paraformer 或 火山引擎 BigModel
+1. **选择引擎** —— 阿里云 Paraformer 或豆包流式语音识别 2.0
 2. **配置凭证**
    - 阿里云：填入 [DashScope API Key](https://dashscope.console.aliyun.com/)
-   - 火山引擎：填入 [ARK](https://console.volcengine.com/ark/) 的 App ID + Access Token
+   - 豆包 ASR：新版豆包语音控制台填 API Key；旧版控制台填 App ID + Access Token。ASR 凭证与通义千问、火山方舟润色凭证相互独立
 3. **润色强度** —— 轻度 / 中度 / 重度（可关闭）
 4. **设置快捷键** —— 点击「录制快捷键」，按下你想要的组合
 5. *(可选)* **自定义词库** —— 添加别名替换规则
@@ -102,4 +102,4 @@ python main.py        # 或：python -m voice_typing
 ## 🔗 相关链接
 
 - 阿里云 DashScope 控制台：<https://dashscope.console.aliyun.com/>
-- 火山引擎 ARK 控制台：<https://console.volcengine.com/ark/>
+- 豆包语音控制台：<https://console.volcengine.com/speech/app>

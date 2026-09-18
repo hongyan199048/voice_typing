@@ -1,4 +1,4 @@
-"""火山引擎 BigModel 流式语音识别引擎"""
+"""豆包流式语音识别 2.0（Seed-ASR）WebSocket 引擎。"""
 
 import asyncio
 import gzip
@@ -12,8 +12,8 @@ import websockets
 
 from voice_typing.engine.base import BaseEngine
 
-WS_URL = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
-RESOURCE_ID = "volc.bigasr.sauc.duration"
+WS_URL = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
+DEFAULT_RESOURCE_ID = "volc.seedasr.sauc.duration"
 
 HDR_CONFIG = bytes([0x11, 0x10, 0x11, 0x00])
 HDR_AUDIO = bytes([0x11, 0x20, 0x01, 0x00])
@@ -54,13 +54,16 @@ def _parse_response(msg: bytes):
 
 
 class VolcengineEngine(BaseEngine):
-    """火山引擎流式语音识别（BigModel ASR v2）"""
+    """豆包流式语音识别 2.0（双向流式优化版）。"""
 
-    name = "火山引擎 BigModel ASR"
+    name = "豆包流式语音识别 2.0"
 
-    def __init__(self, app_id: str = "", access_token: str = ""):
+    def __init__(self, app_id: str = "", access_token: str = "",
+                 api_key: str = "", resource_id: str = DEFAULT_RESOURCE_ID):
         self._app_id = app_id
         self._access_token = access_token
+        self._api_key = api_key
+        self._resource_id = resource_id or DEFAULT_RESOURCE_ID
         self._running = False
         self._audio_queue = None
         self._text_callback = None
@@ -68,10 +71,10 @@ class VolcengineEngine(BaseEngine):
         self._ws_done = None
 
     def initialize(self) -> bool:
-        return bool(self._app_id and self._access_token)
+        return bool(self._api_key or (self._app_id and self._access_token))
 
     def is_available(self) -> bool:
-        return bool(self._app_id and self._access_token)
+        return bool(self._api_key or (self._app_id and self._access_token))
 
     def set_text_callback(self, cb):
         self._text_callback = cb
@@ -88,12 +91,16 @@ class VolcengineEngine(BaseEngine):
 
     async def _ws_session(self):
         headers = {
-            "X-Api-App-Key": self._app_id,
-            "X-Api-Access-Key": self._access_token,
-            "X-Api-Resource-Id": RESOURCE_ID,
+            "X-Api-Resource-Id": self._resource_id,
             "X-Api-Request-Id": str(uuid.uuid4()),
             "X-Api-Connect-Id": str(uuid.uuid4()),
+            "X-Api-Sequence": "-1",
         }
+        if self._api_key:
+            headers["X-Api-Key"] = self._api_key
+        else:
+            headers["X-Api-App-Key"] = self._app_id
+            headers["X-Api-Access-Key"] = self._access_token
         try:
             async with websockets.connect(
                 WS_URL,
@@ -106,13 +113,14 @@ class VolcengineEngine(BaseEngine):
                     "audio": {
                         "format": "pcm", "codec": "raw",
                         "rate": 16000, "bits": 16, "channel": 1,
+                        "language": "zh-CN",
                     },
                     "request": {
                         "model_name": "bigmodel",
+                        "enable_nonstream": True,
                         "enable_itn": True,
                         "enable_punc": True,
                         "result_type": "single",
-                        "language": "zh-CN",
                     },
                 }
                 payload = json.dumps(config).encode()

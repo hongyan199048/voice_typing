@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate, QStyle, QListView,
 )
 
-from voice_typing.core.config import load_config, save_config
+from voice_typing.core.config import load_config, save_config, build_correct_words
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.core.vocabulary import sync_vocabulary
@@ -430,7 +430,7 @@ class SettingsWindow(QWidget):
             self._sidebar_engine_label.setText("引擎就绪")
         else:
             self._home_engine_name.setText("引擎未就绪")
-            self._home_engine_status.setText("请到「设置」页面配置 API Key 或下载本地模型")
+            self._home_engine_status.setText("请到「设置」页面配置 API Key")
             self._sidebar_indicator.setStyleSheet(
                 "background: #666; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px;"
             )
@@ -544,7 +544,7 @@ class SettingsWindow(QWidget):
         title_row.addWidget(del_btn)
         layout.addLayout(title_row)
 
-        hint = QLabel("添加专业词汇，提升 ASR 识别准确率")
+        hint = QLabel("添加专业词汇提升识别；可填「易错词」，火山识别时自动纠正为正确词汇")
         hint.setObjectName("subtitle")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -570,8 +570,14 @@ class SettingsWindow(QWidget):
 
         term_row = QHBoxLayout()
         self._dict_term_input = QLineEdit()
-        self._dict_term_input.setPlaceholderText("输入词汇（如：CUDA、rviz）")
-        term_row.addWidget(self._dict_term_input)
+        self._dict_term_input.setPlaceholderText("词汇（如：Mid360、ROS2）")
+        self._dict_term_input.returnPressed.connect(self._add_dict_item)
+        term_row.addWidget(self._dict_term_input, 2)
+
+        self._dict_alias_input = QLineEdit()
+        self._dict_alias_input.setPlaceholderText("易错词，逗号分隔（可选，如：麦德360,埋360）")
+        self._dict_alias_input.returnPressed.connect(self._add_dict_item)
+        term_row.addWidget(self._dict_alias_input, 3)
 
         add_btn = QPushButton("添加")
         add_btn.setObjectName("accent")
@@ -593,10 +599,13 @@ class SettingsWindow(QWidget):
         for item_data in vocab:
             if isinstance(item_data, dict):
                 term = item_data.get("term", "")
+                alias = item_data.get("alias", "")
             else:
                 term = str(item_data)
-            list_item = QListWidgetItem(term)
-            list_item.setData(Qt.UserRole, {"term": term})
+                alias = ""
+            display = f"{term}   ←   {alias}" if alias else term
+            list_item = QListWidgetItem(display)
+            list_item.setData(Qt.UserRole, {"term": term, "alias": alias})
             self._dict_list.addItem(list_item)
         has_items = self._dict_list.count() > 0
         self._dict_list.setVisible(has_items)
@@ -604,6 +613,7 @@ class SettingsWindow(QWidget):
 
     def _add_dict_item(self):
         term = self._dict_term_input.text().strip()
+        alias = self._dict_alias_input.text().strip()
         if not term:
             self._dict_status.setText("请输入词汇")
             QTimer.singleShot(2000, lambda: self._dict_status.setText(""))
@@ -616,12 +626,15 @@ class SettingsWindow(QWidget):
                 QTimer.singleShot(2000, lambda: self._dict_status.setText(""))
                 return
 
-        item = QListWidgetItem(term)
-        item.setData(Qt.UserRole, {"term": term})
+        display = f"{term}   ←   {alias}" if alias else term
+        item = QListWidgetItem(display)
+        item.setData(Qt.UserRole, {"term": term, "alias": alias})
         self._dict_list.addItem(item)
         self._dict_list.show()
         self._dict_empty_label.hide()
         self._dict_term_input.clear()
+        self._dict_alias_input.clear()
+        self._dict_term_input.setFocus()
         self._save_dict()
 
     def _delete_dict_item(self):
@@ -636,15 +649,15 @@ class SettingsWindow(QWidget):
     def _save_dict(self):
         vocab = []
         for i in range(self._dict_list.count()):
-            data = self._dict_list.item(i).data(Qt.UserRole)
-            term = data.get("term") if data else self._dict_list.item(i).text()
-            vocab.append({"term": term})
+            data = self._dict_list.item(i).data(Qt.UserRole) or {}
+            term = data.get("term") or self._dict_list.item(i).text()
+            vocab.append({"term": term, "alias": data.get("alias", "")})
         self._config["custom_vocabulary"] = vocab
 
         # 同步热词表
         engine_type = self._config.get("engine", "alibaba")
         api_key = self._config.get("alibaba_api_key", "")
-        hotwords = [v["term"] for v in vocab]
+        hotwords = [v["term"] for v in vocab if v["term"]]
         if engine_type == "alibaba" and hotwords and api_key:
             phrase_id = sync_vocabulary(
                 api_key=api_key,
@@ -679,71 +692,146 @@ class SettingsWindow(QWidget):
         title.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0;")
         layout.addWidget(title)
 
-        # 引擎选择
-        engine_card = QGroupBox("引擎选择")
-        elayout = QVBoxLayout(engine_card)
+        # ① 语音识别 (ASR)
+        asr_card = QGroupBox("① 语音识别 (ASR)")
+        asr_v = QVBoxLayout(asr_card)
+        asr_v.setSpacing(8)
+
+        engine_label = QLabel("识别引擎")
+        engine_label.setObjectName("subtitle")
+        asr_v.addWidget(engine_label)
 
         self._engine_combo = _DarkComboBox()
         self._engine_combo.addItem("阿里云 Paraformer（云端）", "alibaba")
-        self._engine_combo.addItem("火山引擎 BigModel（云端）", "volcengine")
+        self._engine_combo.addItem("豆包流式语音识别 2.0（云端）", "volcengine")
         self._engine_combo.currentIndexChanged.connect(self._on_engine_preview)
-        elayout.addWidget(self._engine_combo)
-
-        layout.addWidget(engine_card)
-
-        # API 配置
-        self._api_card = QGroupBox("API 配置")
-        alayout = QVBoxLayout(self._api_card)
+        asr_v.addWidget(self._engine_combo)
 
         self._api_status = QLabel("")
         self._api_status.setObjectName("status")
 
-        # 阿里云
+        # 阿里云 Key（识别用；选「通义千问」润色时也需要，故独立控制显隐）
         self._alibaba_api_widget = QWidget()
         alibaba_api_layout = QVBoxLayout(self._alibaba_api_widget)
         alibaba_api_layout.setContentsMargins(0, 0, 0, 0)
         self._api_wrapper, self._api_input = self._make_password_input(
-            "输入阿里云 DashScope API Key", self._api_status
+            "阿里云 DashScope API Key（识别 / 通义润色共用）", self._api_status
         )
         alibaba_api_layout.addWidget(self._api_wrapper)
-        alayout.addWidget(self._alibaba_api_widget)
+        asr_v.addWidget(self._alibaba_api_widget)
 
-        # 火山引擎
+        # 豆包 ASR 凭证（来自豆包语音控制台，与方舟润色 Key、千问 Key 均不共用）
         self._volc_api_widget = QWidget()
         volc_layout = QVBoxLayout(self._volc_api_widget)
         volc_layout.setContentsMargins(0, 0, 0, 0)
         volc_layout.setSpacing(8)
 
-        volc_asr_label = QLabel("语音识别 (ASR)")
-        volc_asr_label.setObjectName("subtitle")
-        volc_layout.addWidget(volc_asr_label)
+        api_key_wrapper, self._volc_api_key_input = self._make_password_input(
+            "新版控制台 API Key（X-Api-Key，优先使用）"
+        )
+        volc_layout.addWidget(api_key_wrapper)
 
-        app_id_wrapper, self._volc_app_id_input = self._make_password_input("App ID（X-Api-App-Key）")
+        legacy_hint = QLabel("旧版控制台可不填 API Key，改填下面的 App ID 和 Access Token。")
+        legacy_hint.setObjectName("subtitle")
+        legacy_hint.setWordWrap(True)
+        volc_layout.addWidget(legacy_hint)
+
+        app_id_wrapper, self._volc_app_id_input = self._make_password_input("旧版 App ID（X-Api-App-Key）")
         volc_layout.addWidget(app_id_wrapper)
 
-        access_token_wrapper, self._volc_access_token_input = self._make_password_input("Access Token（X-Api-Access-Key）")
+        access_token_wrapper, self._volc_access_token_input = self._make_password_input("旧版 Access Token（X-Api-Access-Key）")
         volc_layout.addWidget(access_token_wrapper)
 
-        volc_llm_label = QLabel("文本润色 (豆包大模型)")
-        volc_llm_label.setObjectName("subtitle")
-        volc_layout.addWidget(volc_llm_label)
+        self._volc_resource_combo = _DarkComboBox()
+        self._volc_resource_combo.addItem(
+            "2.0 小时版（volc.seedasr.sauc.duration）",
+            "volc.seedasr.sauc.duration",
+        )
+        self._volc_resource_combo.addItem(
+            "2.0 并发版（volc.seedasr.sauc.concurrent）",
+            "volc.seedasr.sauc.concurrent",
+        )
+        self._volc_resource_combo.addItem(
+            "1.0 小时版（兼容旧应用）",
+            "volc.bigasr.sauc.duration",
+        )
+        self._volc_resource_combo.addItem(
+            "1.0 并发版（兼容旧应用）",
+            "volc.bigasr.sauc.concurrent",
+        )
+        volc_layout.addWidget(self._volc_resource_combo)
 
+        self._volc_boosting_input = QLineEdit()
+        self._volc_boosting_input.setPlaceholderText("热词表 ID（可选，控制台创建，提升术语识别）")
+        volc_layout.addWidget(self._volc_boosting_input)
+
+        asr_v.addWidget(self._volc_api_widget)
+        asr_v.addWidget(self._api_status)
+        layout.addWidget(asr_card)
+
+        # ② 文本润色 (LLM)
+        polish_llm_card = QGroupBox("② 文本润色 (LLM)")
+        polish_llm_layout = QVBoxLayout(polish_llm_card)
+        polish_llm_layout.setSpacing(8)
+
+        provider_label = QLabel("润色模型（可独立于识别引擎选择）")
+        provider_label.setObjectName("subtitle")
+        polish_llm_layout.addWidget(provider_label)
+
+        self._polish_provider_combo = _DarkComboBox()
+        self._polish_provider_combo.addItem("通义千问 Qwen（复用阿里 Key）", "qwen")
+        self._polish_provider_combo.addItem("DeepSeek", "deepseek")
+        self._polish_provider_combo.addItem("豆包 Doubao（火山方舟）", "doubao")
+        polish_llm_layout.addWidget(self._polish_provider_combo)
+
+        # Qwen：复用阿里 Key，无独立字段
+        self._qwen_polish_widget = QLabel("复用①中阿里云 DashScope Key，无需额外配置。")
+        self._qwen_polish_widget.setObjectName("subtitle")
+        self._qwen_polish_widget.setWordWrap(True)
+        polish_llm_layout.addWidget(self._qwen_polish_widget)
+
+        # DeepSeek
+        self._deepseek_polish_widget = QWidget()
+        ds_layout = QVBoxLayout(self._deepseek_polish_widget)
+        ds_layout.setContentsMargins(0, 0, 0, 0)
+        deepseek_wrapper, self._deepseek_api_key_input = self._make_password_input("DeepSeek API Key")
+        ds_layout.addWidget(deepseek_wrapper)
+        polish_llm_layout.addWidget(self._deepseek_polish_widget)
+
+        # 豆包 ARK（方舟）
+        self._doubao_polish_widget = QWidget()
+        db_layout = QVBoxLayout(self._doubao_polish_widget)
+        db_layout.setContentsMargins(0, 0, 0, 0)
+        db_layout.setSpacing(8)
         doubao_wrapper, self._doubao_api_key_input = self._make_password_input("豆包 ARK API Key")
-        volc_layout.addWidget(doubao_wrapper)
-
+        db_layout.addWidget(doubao_wrapper)
         self._doubao_endpoint_input = QLineEdit()
         self._doubao_endpoint_input.setPlaceholderText("推理接入点 ID（ep-xxxxxxxxxxxx）")
-        volc_layout.addWidget(self._doubao_endpoint_input)
+        db_layout.addWidget(self._doubao_endpoint_input)
+        polish_llm_layout.addWidget(self._doubao_polish_widget)
 
-        alayout.addWidget(self._volc_api_widget)
-        self._volc_api_widget.hide()
+        self._polish_provider_combo.currentIndexChanged.connect(self._on_polish_provider_preview)
 
-        alayout.addWidget(self._api_status)
+        # 润色强度
+        polish_llm_layout.addSpacing(4)
+        strength_label = QLabel("润色强度")
+        strength_label.setObjectName("subtitle")
+        polish_llm_layout.addWidget(strength_label)
 
-        layout.addWidget(self._api_card)
+        self._polish_group = QButtonGroup(self)
+        self._polish_light = QRadioButton("轻度 — 仅删明显语气词，一字不改")
+        self._polish_medium = QRadioButton("中度 — 删语气词、修正标点，保留原文（推荐）")
+        self._polish_strong = QRadioButton("重度 — 删语气词、理顺表达、修正标点")
+        self._polish_group.addButton(self._polish_light, 0)
+        self._polish_group.addButton(self._polish_medium, 1)
+        self._polish_group.addButton(self._polish_strong, 2)
+        polish_llm_layout.addWidget(self._polish_light)
+        polish_llm_layout.addWidget(self._polish_medium)
+        polish_llm_layout.addWidget(self._polish_strong)
+        layout.addWidget(polish_llm_card)
 
-        # 快捷键
-        hotkey_card = QGroupBox("快捷键")
+        # ③ 快捷键
+        hotkey_card = QGroupBox("③ 快捷键")
         hlayout = QVBoxLayout(hotkey_card)
         hrow = QHBoxLayout()
         self._hotkey_btn = QPushButton(self._hotkey_display())
@@ -757,38 +845,8 @@ class SettingsWindow(QWidget):
         hlayout.addLayout(hrow)
         layout.addWidget(hotkey_card)
 
-        # 通用文本润色（独立于 ASR 引擎，DeepSeek 优先）
-        polish_llm_card = QGroupBox("文本润色模型")
-        polish_llm_layout = QVBoxLayout(polish_llm_card)
-        deepseek_wrapper, self._deepseek_api_key_input = self._make_password_input("DeepSeek API Key（优先使用）")
-        polish_llm_layout.addWidget(deepseek_wrapper)
-        polish_llm_hint = QLabel("填了 DeepSeek Key 就用 DeepSeek 润色，不填则用引擎自带润色（豆包/阿里 Qwen）")
-        polish_llm_hint.setObjectName("subtitle")
-        polish_llm_layout.addWidget(polish_llm_hint)
-        layout.addWidget(polish_llm_card)
-
-        # 润色强度
-        polish_card = QGroupBox("润色强度")
-        playout = QVBoxLayout(polish_card)
-        playout.setSpacing(6)
-
-        self._polish_group = QButtonGroup(self)
-        self._polish_light = QRadioButton("轻度 — 仅删明显语气词，一字不改")
-        self._polish_medium = QRadioButton("中度 — 删语气词、修正标点，保留原文（推荐）")
-        self._polish_strong = QRadioButton("重度 — 删语气词、理顺表达、修正标点")
-        self._polish_group.addButton(self._polish_light, 0)
-        self._polish_group.addButton(self._polish_medium, 1)
-        self._polish_group.addButton(self._polish_strong, 2)
-        playout.addWidget(self._polish_light)
-        playout.addWidget(self._polish_medium)
-        playout.addWidget(self._polish_strong)
-        polish_hint = QLabel("润色力度调节")
-        polish_hint.setObjectName("subtitle")
-        playout.addWidget(polish_hint)
-        layout.addWidget(polish_card)
-
-        # 开机启动
-        autostart_card = QGroupBox("开机启动")
+        # ④ 开机启动
+        autostart_card = QGroupBox("④ 开机启动")
         alayout_auto = QVBoxLayout(autostart_card)
         self._autostart_check = QCheckBox("开机自动启动 VoiceType")
         alayout_auto.addWidget(self._autostart_check)
@@ -896,6 +954,12 @@ class SettingsWindow(QWidget):
             engine = VolcengineEngine(
                 app_id=self._config.get("volc_asr_app_id", ""),
                 access_token=self._config.get("volc_asr_access_token", ""),
+                api_key=self._config.get("volc_asr_api_key", ""),
+                resource_id=self._config.get(
+                    "volc_asr_resource_id", "volc.seedasr.sauc.duration"
+                ),
+                boosting_table_id=self._config.get("volc_boosting_table_id", ""),
+                correct_words=build_correct_words(self._config),
             )
             engine.initialize()
         else:
@@ -918,8 +982,29 @@ class SettingsWindow(QWidget):
         self._api_input.setText(self._config.get("alibaba_api_key", ""))
         self._volc_app_id_input.setText(self._config.get("volc_asr_app_id", ""))
         self._volc_access_token_input.setText(self._config.get("volc_asr_access_token", ""))
+        self._volc_api_key_input.setText(self._config.get("volc_asr_api_key", ""))
+        resource_id = self._config.get(
+            "volc_asr_resource_id", "volc.seedasr.sauc.duration"
+        )
+        resource_idx = self._volc_resource_combo.findData(resource_id)
+        if resource_idx >= 0:
+            self._volc_resource_combo.setCurrentIndex(resource_idx)
+        self._volc_boosting_input.setText(self._config.get("volc_boosting_table_id", ""))
 
-        self._on_engine_preview()
+        # 润色模型：显式配置优先，未配置则按已填 Key 推断（与后端 _resolve_polish_provider 一致）
+        provider = self._config.get("polish_provider", "")
+        if not provider:
+            if self._config.get("deepseek_api_key"):
+                provider = "deepseek"
+            elif self._config.get("engine", "alibaba") == "volcengine":
+                provider = "doubao"
+            else:
+                provider = "qwen"
+        pidx = self._polish_provider_combo.findData(provider)
+        if pidx >= 0:
+            self._polish_provider_combo.setCurrentIndex(pidx)
+
+        self._refresh_credential_visibility()
 
         self._autostart_check.setChecked(self._config.get("autostart", False))
 
@@ -937,13 +1022,23 @@ class SettingsWindow(QWidget):
     # ---------- 事件处理 ----------
 
     def _on_engine_preview(self, index=None):
+        self._refresh_credential_visibility()
+
+    def _on_polish_provider_preview(self, index=None):
+        self._refresh_credential_visibility()
+
+    def _refresh_credential_visibility(self):
+        """按识别引擎 + 润色模型联动显示需要的凭证字段。
+        阿里 Key 在 ASR=阿里 或 润色=通义 时都需要，故独立控制显隐。"""
         engine_type = self._engine_combo.currentData()
-        if engine_type == "volcengine":
-            self._alibaba_api_widget.hide()
-            self._volc_api_widget.show()
-        else:
-            self._alibaba_api_widget.show()
-            self._volc_api_widget.hide()
+        provider = self._polish_provider_combo.currentData()
+        self._volc_api_widget.setVisible(engine_type == "volcengine")
+        self._alibaba_api_widget.setVisible(
+            engine_type == "alibaba" or provider == "qwen"
+        )
+        self._qwen_polish_widget.setVisible(provider == "qwen")
+        self._deepseek_polish_widget.setVisible(provider == "deepseek")
+        self._doubao_polish_widget.setVisible(provider == "doubao")
 
     def _on_apply(self):
         engine_type = self._engine_combo.currentData()
@@ -951,6 +1046,10 @@ class SettingsWindow(QWidget):
         self._config["alibaba_api_key"] = self._api_input.text()
         self._config["volc_asr_app_id"] = self._volc_app_id_input.text()
         self._config["volc_asr_access_token"] = self._volc_access_token_input.text()
+        self._config["volc_asr_api_key"] = self._volc_api_key_input.text().strip()
+        self._config["volc_asr_resource_id"] = self._volc_resource_combo.currentData()
+        self._config["volc_boosting_table_id"] = self._volc_boosting_input.text().strip()
+        self._config["polish_provider"] = self._polish_provider_combo.currentData()
 
         autostart = self._autostart_check.isChecked()
         self._config["autostart"] = autostart
@@ -975,10 +1074,11 @@ class SettingsWindow(QWidget):
         vocab = []
         hotwords = []
         for i in range(self._dict_list.count()):
-            data = self._dict_list.item(i).data(Qt.UserRole)
-            term = data.get("term") if data else self._dict_list.item(i).text()
-            vocab.append({"term": term})
-            hotwords.append(term)
+            data = self._dict_list.item(i).data(Qt.UserRole) or {}
+            term = data.get("term") or self._dict_list.item(i).text()
+            vocab.append({"term": term, "alias": data.get("alias", "")})
+            if term:
+                hotwords.append(term)
         self._config["custom_vocabulary"] = vocab
 
         if engine_type == "alibaba" and hotwords and self._config.get("alibaba_api_key"):
@@ -1057,7 +1157,7 @@ class SettingsWindow(QWidget):
         if self._engine and self._engine.is_available():
             self._status_label.setText(f"引擎就绪: {self._engine.name}")
         else:
-            self._status_label.setText("引擎未就绪，请配置 API Key 或下载本地模型")
+            self._status_label.setText("引擎未就绪，请配置 API Key")
 
     # ---------- 托盘事件 ----------
 

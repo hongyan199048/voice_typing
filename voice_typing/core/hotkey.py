@@ -67,7 +67,7 @@ class HotkeyManager:
       防止 X11 丢失 key-up 事件导致修饰键永久残留
     """
 
-    LONG_PRESS_SEC = 0.12
+    LONG_PRESS_SEC = 0.05
     MAX_KEY_HOLD_SEC = 10.0        # 单键最长保持，超时自动清除
     STALE_CHECK_INTERVAL = 3.0     # 卡键检测间隔
 
@@ -97,9 +97,10 @@ class HotkeyManager:
         self._is_long_press = len(hotkey_list) == 1
         self._clear_state()
 
-    def set_callbacks(self, on_start, on_stop):
+    def set_callbacks(self, on_start, on_stop, on_key_detected=None):
         self._on_start = on_start
         self._on_stop = on_stop
+        self._on_key_detected = on_key_detected  # 按键检测到时立即回调（调试用）
 
     def start(self):
         if self._listener is not None:
@@ -145,6 +146,29 @@ class HotkeyManager:
                 timeout=1,
                 capture_output=True,
             )
+        except Exception:
+            pass
+
+    def _release_all_keys(self):
+        """释放所有按着的键（修饰键 + 普通键），防止组合键松开顺序问题"""
+        try:
+            # 释放修饰键
+            subprocess.run(
+                ["xdotool", "keyup", "ctrl", "alt", "shift", "super"],
+                timeout=1, capture_output=True,
+            )
+            # 释放所有普通键（当前按着的）
+            with self._lock:
+                for k in list(self._keys):
+                    key_str = _key_to_str(k)
+                    if key_str and key_str not in ("ctrl", "alt", "shift", "super"):
+                        try:
+                            subprocess.run(
+                                ["xdotool", "keyup", key_str],
+                                timeout=1, capture_output=True,
+                            )
+                        except Exception:
+                            pass
         except Exception:
             pass
 
@@ -227,6 +251,8 @@ class HotkeyManager:
         if self._hotkey_set and not self._hotkey_set.issubset(self._keys):
             if self._recording:
                 self._recording = False
+                # 释放所有按着的键，防止先松修饰键导致剩余键被输入
+                self._release_all_keys()
                 if self._on_stop:
                     self._on_stop()
 
@@ -246,6 +272,9 @@ class HotkeyManager:
             if self._is_long_press:
                 if k in self._hotkey_set and self._press_time is None:
                     self._press_time = time.time()
+                    # 按键检测到，立刻通知（用于延迟诊断）
+                    if self._on_key_detected:
+                        self._on_key_detected()
                     if self.LONG_PRESS_SEC <= 0:
                         self._on_long_press_start()
                     else:

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>VoiceType Logo Concepts</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #141414;
+    --border: #1f1f1f;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #22c55e;
+    --accent-dark: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 48px 32px 80px;
+    min-height: 100vh;
+  }
+  header { max-width: 1280px; margin: 0 auto 40px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  .grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .18s, transform .18s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .preview-large {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0a0a0a;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .preview-large svg { width: 70%; height: 70%; }
+
+  .preview-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #0a0a0a;
+    border-radius: 10px;
+  }
+  .preview-row .ico {
+    background: var(--card);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ico-64 { width: 64px; height: 64px; }
+  .ico-32 { width: 32px; height: 32px; }
+  .ico-16 { width: 16px; height: 16px; }
+  .ico-64 svg, .ico-32 svg, .ico-16 svg { width: 100%; height: 100%; }
+  .preview-row .label { color: var(--muted); font-size: 11px; margin-top: 4px; text-align: center; }
+  .ico-wrap { display: flex; flex-direction: column; align-items: center; }
+
+  .name { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .desc { color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+  .num {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-right: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VoiceType <span>Logo 方案</span></h1>
+  <p>统一暗色主题 + 绿色主调 (#22c55e)。每个方案在大尺寸 / 64px / 32px / 16px 下都做了适配预览。点开各卡片对比哪个最合眼缘。</p>
+</header>
+
+<div class="grid">
+
+  <!-- 1. Modern Mic Waves -->
+  <div class="card">
+    <div class="preview-large">
+      <!-- LOGO 1 -->
+      <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+        <rect width="128" height="128" rx="28" fill="#22c55e"/>
+        <rect x="56" y="32" width="16" height="44" rx="8" fill="#0d0d0d"/>
+        <path d="M44 60 v8 a20 20 0 0 0 40 0 v-8" stroke="#0d0d0d" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <line x1="64" y1="92" x2="64" y2="104" stroke="#0d0d0d" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><rect x="56" y="32" width="16" height="44" rx="8" fill="#0d0d0d"/><path d="M44 60 v8 a20 20 0 0 0 40 0 v-8" stroke="#0d0d0d" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="64" y1="92" x2="64" y2="104" stroke="#0d0d0d" stroke-width="6" stroke-linecap="round"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><rect x="56" y="32" width="16" height="44" rx="8" fill="#0d0d0d"/><path d="M44 60 v8 a20 20 0 0 0 40 0 v-8" stroke="#0d0d0d" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="64" y1="92" x2="64" y2="104" stroke="#0d0d0d" stroke-width="6" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><rect x="56" y="32" width="16" height="44" rx="8" fill="#0d0d0d"/><path d="M44 60 v8 a20 20 0 0 0 40 0 v-8" stroke="#0d0d0d" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="64" y1="92" x2="64" y2="104" stroke="#0d0d0d" stroke-width="6" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">01</span>经典麦克风</div>
+    <div class="desc">最直接的语意 — 麦克风胶囊+下半圆托架。绿底黑形，识别度极高，在 16px 也能认出。</div>
+  </div>
+
+  <!-- 2. V-Wave -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <rect x="2" y="2" width="124" height="124" rx="26" fill="none" stroke="#22c55e" stroke-width="2"/>
+        <g fill="#22c55e">
+          <rect x="22" y="46" width="8" height="36" rx="4"/>
+          <rect x="38" y="38" width="8" height="52" rx="4"/>
+          <rect x="54" y="30" width="8" height="68" rx="4"/>
+          <rect x="70" y="38" width="8" height="52" rx="4"/>
+          <rect x="86" y="46" width="8" height="36" rx="4"/>
+          <rect x="102" y="54" width="8" height="20" rx="4"/>
+        </g>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="2" y="2" width="124" height="124" rx="26" fill="none" stroke="#22c55e" stroke-width="2"/><g fill="#22c55e"><rect x="22" y="46" width="8" height="36" rx="4"/><rect x="38" y="38" width="8" height="52" rx="4"/><rect x="54" y="30" width="8" height="68" rx="4"/><rect x="70" y="38" width="8" height="52" rx="4"/><rect x="86" y="46" width="8" height="36" rx="4"/><rect x="102" y="54" width="8" height="20" rx="4"/></g></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="2" y="2" width="124" height="124" rx="26" fill="none" stroke="#22c55e" stroke-width="2"/><g fill="#22c55e"><rect x="22" y="46" width="8" height="36" rx="4"/><rect x="38" y="38" width="8" height="52" rx="4"/><rect x="54" y="30" width="8" height="68" rx="4"/><rect x="70" y="38" width="8" height="52" rx="4"/><rect x="86" y="46" width="8" height="36" rx="4"/><rect x="102" y="54" width="8" height="20" rx="4"/></g></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g fill="#22c55e"><rect x="22" y="46" width="8" height="36" rx="4"/><rect x="38" y="38" width="8" height="52" rx="4"/><rect x="54" y="30" width="8" height="68" rx="4"/><rect x="70" y="38" width="8" height="52" rx="4"/><rect x="86" y="46" width="8" height="36" rx="4"/><rect x="102" y="54" width="8" height="20" rx="4"/></g></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">02</span>波形条</div>
+    <div class="desc">音频波形语意 — 6 根胶囊条对称排布。极简、抽象、科技感强，适合"实时"的产品调性。</div>
+  </div>
+
+  <!-- 3. Mic + Cursor -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#141414"/>
+        <rect x="44" y="24" width="20" height="52" rx="10" fill="#22c55e"/>
+        <path d="M32 60 v6 a22 22 0 0 0 44 0 v-6" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <line x1="54" y1="90" x2="54" y2="104" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/>
+        <g stroke="#f0f0f0" stroke-width="5" stroke-linecap="round">
+          <line x1="92" y1="40" x2="92" y2="88"/>
+          <line x1="84" y1="42" x2="100" y2="42"/>
+          <line x1="84" y1="86" x2="100" y2="86"/>
+        </g>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#141414"/><rect x="44" y="24" width="20" height="52" rx="10" fill="#22c55e"/><path d="M32 60 v6 a22 22 0 0 0 44 0 v-6" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="54" y1="90" x2="54" y2="104" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/><g stroke="#f0f0f0" stroke-width="5" stroke-linecap="round"><line x1="92" y1="40" x2="92" y2="88"/><line x1="84" y1="42" x2="100" y2="42"/><line x1="84" y1="86" x2="100" y2="86"/></g></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#141414"/><rect x="44" y="24" width="20" height="52" rx="10" fill="#22c55e"/><path d="M32 60 v6 a22 22 0 0 0 44 0 v-6" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/><line x1="54" y1="90" x2="54" y2="104" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/><g stroke="#f0f0f0" stroke-width="5" stroke-linecap="round"><line x1="92" y1="40" x2="92" y2="88"/><line x1="84" y1="42" x2="100" y2="42"/><line x1="84" y1="86" x2="100" y2="86"/></g></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#141414"/><rect x="44" y="24" width="20" height="52" rx="10" fill="#22c55e"/><path d="M32 60 v6 a22 22 0 0 0 44 0 v-6" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">03</span>麦克风 + 光标</div>
+    <div class="desc">语音 → 文字的故事感最强。绿色麦克风 + 白色文本输入光标 (I-beam)，直接说明产品功能。</div>
+  </div>
+
+  <!-- 4. Speech Bubble Typing -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#22c55e"/>
+        <path d="M28 38 a12 12 0 0 1 12 -12 h48 a12 12 0 0 1 12 12 v32 a12 12 0 0 1 -12 12 h-28 l-14 16 v-16 h-6 a12 12 0 0 1 -12 -12 z" fill="#0d0d0d"/>
+        <circle cx="48" cy="54" r="5" fill="#22c55e"/>
+        <circle cx="64" cy="54" r="5" fill="#22c55e"/>
+        <circle cx="80" cy="54" r="5" fill="#22c55e"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M28 38 a12 12 0 0 1 12 -12 h48 a12 12 0 0 1 12 12 v32 a12 12 0 0 1 -12 12 h-28 l-14 16 v-16 h-6 a12 12 0 0 1 -12 -12 z" fill="#0d0d0d"/><circle cx="48" cy="54" r="5" fill="#22c55e"/><circle cx="64" cy="54" r="5" fill="#22c55e"/><circle cx="80" cy="54" r="5" fill="#22c55e"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M28 38 a12 12 0 0 1 12 -12 h48 a12 12 0 0 1 12 12 v32 a12 12 0 0 1 -12 12 h-28 l-14 16 v-16 h-6 a12 12 0 0 1 -12 -12 z" fill="#0d0d0d"/><circle cx="48" cy="54" r="5" fill="#22c55e"/><circle cx="64" cy="54" r="5" fill="#22c55e"/><circle cx="80" cy="54" r="5" fill="#22c55e"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M28 38 a12 12 0 0 1 12 -12 h48 a12 12 0 0 1 12 12 v32 a12 12 0 0 1 -12 12 h-28 l-14 16 v-16 h-6 a12 12 0 0 1 -12 -12 z" fill="#0d0d0d"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">04</span>对话气泡</div>
+    <div class="desc">输入中的三点 + 对话气泡。强调"输入"动作，亲和力强，类似 iMessage 输入态。</div>
+  </div>
+
+  <!-- 5. Sound Pill -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <rect x="14" y="40" width="100" height="48" rx="24" fill="#1a1a1a" stroke="#22c55e" stroke-width="2"/>
+        <g fill="#22c55e">
+          <rect x="28" y="58" width="5" height="12" rx="2.5"/>
+          <rect x="38" y="52" width="5" height="24" rx="2.5"/>
+          <rect x="48" y="46" width="5" height="36" rx="2.5"/>
+          <rect x="58" y="52" width="5" height="24" rx="2.5"/>
+          <rect x="68" y="46" width="5" height="36" rx="2.5"/>
+          <rect x="78" y="54" width="5" height="20" rx="2.5"/>
+          <rect x="88" y="50" width="5" height="28" rx="2.5"/>
+          <rect x="98" y="58" width="5" height="12" rx="2.5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="14" y="40" width="100" height="48" rx="24" fill="#1a1a1a" stroke="#22c55e" stroke-width="2"/><g fill="#22c55e"><rect x="28" y="58" width="5" height="12" rx="2.5"/><rect x="38" y="52" width="5" height="24" rx="2.5"/><rect x="48" y="46" width="5" height="36" rx="2.5"/><rect x="58" y="52" width="5" height="24" rx="2.5"/><rect x="68" y="46" width="5" height="36" rx="2.5"/><rect x="78" y="54" width="5" height="20" rx="2.5"/><rect x="88" y="50" width="5" height="28" rx="2.5"/><rect x="98" y="58" width="5" height="12" rx="2.5"/></g></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><rect x="14" y="40" width="100" height="48" rx="24" fill="#1a1a1a" stroke="#22c55e" stroke-width="2"/><g fill="#22c55e"><rect x="28" y="58" width="5" height="12" rx="2.5"/><rect x="38" y="52" width="5" height="24" rx="2.5"/><rect x="48" y="46" width="5" height="36" rx="2.5"/><rect x="58" y="52" width="5" height="24" rx="2.5"/><rect x="68" y="46" width="5" height="36" rx="2.5"/><rect x="78" y="54" width="5" height="20" rx="2.5"/><rect x="88" y="50" width="5" height="28" rx="2.5"/><rect x="98" y="58" width="5" height="12" rx="2.5"/></g></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><g fill="#22c55e"><rect x="48" y="46" width="5" height="36" rx="2.5"/><rect x="58" y="52" width="5" height="24" rx="2.5"/><rect x="68" y="46" width="5" height="36" rx="2.5"/><rect x="78" y="54" width="5" height="20" rx="2.5"/></g></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">05</span>声波胶囊</div>
+    <div class="desc">圆角胶囊内嵌波形，与浮窗的视觉语言一致（你的 overlay 就是圆角胶囊）。品牌延展性最好。</div>
+  </div>
+
+  <!-- 6. Minimalist Mic -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#1a1a1a"/>
+        <circle cx="64" cy="56" r="32" fill="none" stroke="#22c55e" stroke-width="4"/>
+        <rect x="56" y="40" width="16" height="32" rx="8" fill="#22c55e"/>
+        <line x1="64" y1="88" x2="64" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="48" y1="104" x2="80" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#1a1a1a"/><circle cx="64" cy="56" r="32" fill="none" stroke="#22c55e" stroke-width="4"/><rect x="56" y="40" width="16" height="32" rx="8" fill="#22c55e"/><line x1="64" y1="88" x2="64" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/><line x1="48" y1="104" x2="80" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#1a1a1a"/><circle cx="64" cy="56" r="32" fill="none" stroke="#22c55e" stroke-width="4"/><rect x="56" y="40" width="16" height="32" rx="8" fill="#22c55e"/><line x1="64" y1="88" x2="64" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/><line x1="48" y1="104" x2="80" y2="104" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#1a1a1a"/><circle cx="64" cy="56" r="32" fill="none" stroke="#22c55e" stroke-width="4"/><rect x="56" y="40" width="16" height="32" rx="8" fill="#22c55e"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">06</span>线性麦克风</div>
+    <div class="desc">圆环 + 实体麦克风 + 底座支架。线面结合，专业克制，类似 Apple Podcasts 的风格。</div>
+  </div>
+
+  <!-- 7. VT Monogram -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#22c55e"/>
+        <path d="M22 32 L42 88 L62 32" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M70 36 H106 M88 36 V92" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <g fill="#0d0d0d">
+          <rect x="32" y="98" width="4" height="6" rx="2"/>
+          <rect x="42" y="96" width="4" height="10" rx="2"/>
+          <rect x="52" y="94" width="4" height="14" rx="2"/>
+          <rect x="62" y="96" width="4" height="10" rx="2"/>
+          <rect x="72" y="98" width="4" height="6" rx="2"/>
+        </g>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M22 32 L42 88 L62 32" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 36 H106 M88 36 V92" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round"/><g fill="#0d0d0d"><rect x="32" y="98" width="4" height="6" rx="2"/><rect x="42" y="96" width="4" height="10" rx="2"/><rect x="52" y="94" width="4" height="14" rx="2"/><rect x="62" y="96" width="4" height="10" rx="2"/><rect x="72" y="98" width="4" height="6" rx="2"/></g></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M22 32 L42 88 L62 32" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 36 H106 M88 36 V92" stroke="#0d0d0d" stroke-width="10" fill="none" stroke-linecap="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#22c55e"/><path d="M22 32 L42 88 L62 32" stroke="#0d0d0d" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 36 H106 M88 36 V92" stroke="#0d0d0d" stroke-width="12" fill="none" stroke-linecap="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">07</span>VT 字母</div>
+    <div class="desc">VT 首字母 + 波形点缀。品牌化、辨识度高，适合作为应用商店、网站的主视觉。</div>
+  </div>
+
+  <!-- 8. Pulse Wave -->
+  <div class="card">
+    <div class="preview-large">
+      <svg viewBox="0 0 128 128">
+        <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+        <circle cx="64" cy="64" r="42" fill="none" stroke="#22c55e" stroke-width="2" opacity="0.3"/>
+        <circle cx="64" cy="64" r="32" fill="#22c55e"/>
+        <path d="M40 64 L48 64 L52 52 L60 76 L68 44 L76 84 L80 64 L88 64" stroke="#0d0d0d" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="preview-row">
+      <div class="ico-wrap"><div class="ico ico-64"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="42" fill="none" stroke="#22c55e" stroke-width="2" opacity="0.3"/><circle cx="64" cy="64" r="32" fill="#22c55e"/><path d="M40 64 L48 64 L52 52 L60 76 L68 44 L76 84 L80 64 L88 64" stroke="#0d0d0d" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="label">64</div></div>
+      <div class="ico-wrap"><div class="ico ico-32"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="32" fill="#22c55e"/><path d="M40 64 L48 64 L52 52 L60 76 L68 44 L76 84 L80 64 L88 64" stroke="#0d0d0d" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="label">32</div></div>
+      <div class="ico-wrap"><div class="ico ico-16"><svg viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#0d0d0d"/><circle cx="64" cy="64" r="40" fill="#22c55e"/><path d="M36 64 L48 64 L56 44 L72 84 L80 64 L92 64" stroke="#0d0d0d" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="label">16</div></div>
+    </div>
+    <div class="name"><span class="num">08</span>心跳波形</div>
+    <div class="desc">圆形主体 + 心电图式波形 + 外圈光晕。有"实时录音中"的脉动感，最有动态意味。</div>
+  </div>
+
+</div>
+
+<div style="max-width:1280px;margin:48px auto 0;text-align:center;color:var(--muted);font-size:13px;">
+  告诉我你倾向哪个编号（也可以说"01 的形状 + 05 的胶囊背景"组合），我把它转成 PyQt5 的 QPainter 代码替换掉 _make_tray_icon()。
+</div>
+
+</body>
+</html>

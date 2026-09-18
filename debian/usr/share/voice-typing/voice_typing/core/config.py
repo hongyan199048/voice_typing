@@ -11,6 +11,8 @@ DEFAULT_CONFIG = {
     "alibaba_api_key": "",          # 阿里云 DashScope API Key（ASR + 润色共用）
     "volc_asr_app_id": "",          # 火山引擎 ASR App ID
     "volc_asr_access_token": "",   # 火山引擎 ASR Access Token
+    "volc_asr_api_key": "",         # 新版豆包语音控制台 API Key
+    "volc_asr_resource_id": "volc.seedasr.sauc.duration",
     "hotkey": ["ctrl", "alt", "v"],
     "first_run": True,
     "custom_vocabulary": [],        # 自定义热词列表：["CUDA", "GitHub", "Python"]

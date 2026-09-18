@@ -67,6 +67,10 @@ class VoiceTypingApp(QObject):
             self._engine = VolcengineEngine(
                 app_id=self._config.get("volc_asr_app_id", ""),
                 access_token=self._config.get("volc_asr_access_token", ""),
+                api_key=self._config.get("volc_asr_api_key", ""),
+                resource_id=self._config.get(
+                    "volc_asr_resource_id", "volc.seedasr.sauc.duration"
+                ),
             )
         else:
             self._engine = AlibabaEngine(

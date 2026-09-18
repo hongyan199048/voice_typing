@@ -38,3 +38,7 @@ models/
 
 # 日志
 *.log
+
+# deb 构建产物
+*.deb
+*.deb.*

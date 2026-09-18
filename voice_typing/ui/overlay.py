@@ -13,9 +13,16 @@ class StatusIndicator(QWidget):
         super().__init__()
         self.setFixedSize(24, 24)
         self._recording = False
+        self._custom_color = None  # 自定义颜色（用于调试闪黄）
 
     def set_recording(self, recording: bool):
         self._recording = recording
+        self._custom_color = None
+        self.update()
+
+    def set_color(self, color):
+        """直接设置颜色（调试用）"""
+        self._custom_color = color
         self.update()
 
     def paintEvent(self, event):
@@ -23,8 +30,9 @@ class StatusIndicator(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
-        # 根据状态选择颜色
-        if self._recording:
+        if self._custom_color:
+            color = self._custom_color
+        elif self._recording:
             color = QColor(239, 68, 68)  # 红色
         else:
             color = QColor(34, 197, 94)  # 绿色
@@ -103,6 +111,7 @@ class OverlayWindow(QWidget):
         self._waveform = WaveformWidget()
         self._waveform.hide()  # 初始隐藏
         self._text_received = False  # 当前录音周期是否已收到文字
+        self._polish_active = False  # 实时润色进行中时，忽略 ASR 原始文字
 
         self._text_label = QLabel("")
         self._text_label.setStyleSheet(
@@ -175,6 +184,11 @@ class OverlayWindow(QWidget):
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(self.rect(), 24, 24)
 
+    def flash_yellow(self):
+        """按键检测到时闪黄色，用于延迟诊断"""
+        self._indicator.set_color(QColor(234, 179, 8))  # 黄色
+        self._indicator.update()
+
     def start_recording(self):
         """开始录音：圆球变红 + 窗口扩展开启动画 + 波形渐现"""
         self._indicator.set_recording(True)
@@ -214,8 +228,9 @@ class OverlayWindow(QWidget):
             return self.MAX_LABEL_WIDTH, 48
 
     def update_text(self, text: str):
-        """实时更新文字（录音时），首次收到文字后隐藏波形"""
-        if not text:
+        """实时更新文字（录音时），首次收到文字后隐藏波形。
+        当 _polish_active=True 时忽略 ASR 原始文字，由润色流控制显示。"""
+        if not text or self._polish_active:
             return
 
         # 首次收到识别文字 → 隐藏波形，只显示文字
@@ -250,6 +265,7 @@ class OverlayWindow(QWidget):
         self._waveform.stop()
         self._text_label.hide()
         self._text_label.setText("")
+        self._polish_active = False
         self._set_idle_size()
 
     def mousePressEvent(self, event):

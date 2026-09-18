@@ -2,8 +2,5 @@ PyQt5>=5.15
 pyaudio
 dashscope
 pynput
-faster-whisper
-numpy
-deepmultilingualpunctuation
 websockets
 openai

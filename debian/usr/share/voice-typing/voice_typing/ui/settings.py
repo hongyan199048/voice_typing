@@ -685,7 +685,7 @@ class SettingsWindow(QWidget):
 
         self._engine_combo = _DarkComboBox()
         self._engine_combo.addItem("阿里云 Paraformer（云端）", "alibaba")
-        self._engine_combo.addItem("火山引擎 BigModel（云端）", "volcengine")
+        self._engine_combo.addItem("豆包流式语音识别 2.0（云端）", "volcengine")
         self._engine_combo.currentIndexChanged.connect(self._on_engine_preview)
         elayout.addWidget(self._engine_combo)
 
@@ -896,6 +896,10 @@ class SettingsWindow(QWidget):
             engine = VolcengineEngine(
                 app_id=self._config.get("volc_asr_app_id", ""),
                 access_token=self._config.get("volc_asr_access_token", ""),
+                api_key=self._config.get("volc_asr_api_key", ""),
+                resource_id=self._config.get(
+                    "volc_asr_resource_id", "volc.seedasr.sauc.duration"
+                ),
             )
             engine.initialize()
         else:
