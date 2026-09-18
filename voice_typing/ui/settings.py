@@ -710,12 +710,12 @@ class SettingsWindow(QWidget):
         self._api_status = QLabel("")
         self._api_status.setObjectName("status")
 
-        # 阿里云 Key（识别用；选「通义千问」润色时也需要，故独立控制显隐）
+        # 阿里云 Key（仅识别用）
         self._alibaba_api_widget = QWidget()
         alibaba_api_layout = QVBoxLayout(self._alibaba_api_widget)
         alibaba_api_layout.setContentsMargins(0, 0, 0, 0)
         self._api_wrapper, self._api_input = self._make_password_input(
-            "阿里云 DashScope API Key（识别 / 通义润色共用）", self._api_status
+            "阿里云 DashScope API Key（用于 Paraformer 识别）", self._api_status
         )
         alibaba_api_layout.addWidget(self._api_wrapper)
         asr_v.addWidget(self._alibaba_api_widget)
@@ -774,41 +774,41 @@ class SettingsWindow(QWidget):
         polish_llm_layout = QVBoxLayout(polish_llm_card)
         polish_llm_layout.setSpacing(8)
 
-        provider_label = QLabel("润色模型（可独立于识别引擎选择）")
+        provider_label = QLabel("润色模型（与识别引擎完全独立）")
         provider_label.setObjectName("subtitle")
         polish_llm_layout.addWidget(provider_label)
 
         self._polish_provider_combo = _DarkComboBox()
-        self._polish_provider_combo.addItem("通义千问 Qwen（复用阿里 Key）", "qwen")
+        self._polish_provider_combo.addItem("关闭润色（直接输出识别原文）", "off")
         self._polish_provider_combo.addItem("DeepSeek", "deepseek")
-        self._polish_provider_combo.addItem("豆包 Doubao（火山方舟）", "doubao")
+        self._polish_provider_combo.addItem("智谱 GLM", "glm")
+        self._polish_provider_combo.addItem("MiniMax", "minimax")
         polish_llm_layout.addWidget(self._polish_provider_combo)
 
-        # Qwen：复用阿里 Key，无独立字段
-        self._qwen_polish_widget = QLabel("复用①中阿里云 DashScope Key，无需额外配置。")
-        self._qwen_polish_widget.setObjectName("subtitle")
-        self._qwen_polish_widget.setWordWrap(True)
-        polish_llm_layout.addWidget(self._qwen_polish_widget)
+        # 每家一个 Key 输入框，按所选模型显隐
+        self._polish_key_widgets = {}
+        self._polish_key_inputs = {}
+        for provider, label in (
+            ("deepseek", "DeepSeek API Key"),
+            ("glm", "智谱 GLM API Key"),
+            ("minimax", "MiniMax API Key"),
+        ):
+            widget = QWidget()
+            wlayout = QVBoxLayout(widget)
+            wlayout.setContentsMargins(0, 0, 0, 0)
+            wrapper, field = self._make_password_input(label)
+            wlayout.addWidget(wrapper)
+            polish_llm_layout.addWidget(widget)
+            self._polish_key_widgets[provider] = widget
+            self._polish_key_inputs[provider] = field
 
-        # DeepSeek
-        self._deepseek_polish_widget = QWidget()
-        ds_layout = QVBoxLayout(self._deepseek_polish_widget)
-        ds_layout.setContentsMargins(0, 0, 0, 0)
-        deepseek_wrapper, self._deepseek_api_key_input = self._make_password_input("DeepSeek API Key")
-        ds_layout.addWidget(deepseek_wrapper)
-        polish_llm_layout.addWidget(self._deepseek_polish_widget)
+        self._polish_off_hint = QLabel("识别结果不经大模型处理，直接粘贴（仍会应用词库别名替换）。")
+        self._polish_off_hint.setObjectName("subtitle")
+        self._polish_off_hint.setWordWrap(True)
+        polish_llm_layout.addWidget(self._polish_off_hint)
 
-        # 豆包 ARK（方舟）
-        self._doubao_polish_widget = QWidget()
-        db_layout = QVBoxLayout(self._doubao_polish_widget)
-        db_layout.setContentsMargins(0, 0, 0, 0)
-        db_layout.setSpacing(8)
-        doubao_wrapper, self._doubao_api_key_input = self._make_password_input("豆包 ARK API Key")
-        db_layout.addWidget(doubao_wrapper)
-        self._doubao_endpoint_input = QLineEdit()
-        self._doubao_endpoint_input.setPlaceholderText("推理接入点 ID（ep-xxxxxxxxxxxx）")
-        db_layout.addWidget(self._doubao_endpoint_input)
-        polish_llm_layout.addWidget(self._doubao_polish_widget)
+        self._realtime_polish_check = QCheckBox("录音过程中提前润色（更快出结果，可能多花 token）")
+        polish_llm_layout.addWidget(self._realtime_polish_check)
 
         self._polish_provider_combo.currentIndexChanged.connect(self._on_polish_provider_preview)
 
@@ -994,12 +994,11 @@ class SettingsWindow(QWidget):
         # 润色模型：显式配置优先，未配置则按已填 Key 推断（与后端 _resolve_polish_provider 一致）
         provider = self._config.get("polish_provider", "")
         if not provider:
-            if self._config.get("deepseek_api_key"):
-                provider = "deepseek"
-            elif self._config.get("engine", "alibaba") == "volcengine":
-                provider = "doubao"
-            else:
-                provider = "qwen"
+            provider = next(
+                (name for name in ("deepseek", "glm", "minimax")
+                 if self._config.get(f"{name}_api_key")),
+                "off",
+            )
         pidx = self._polish_provider_combo.findData(provider)
         if pidx >= 0:
             self._polish_provider_combo.setCurrentIndex(pidx)
@@ -1013,9 +1012,9 @@ class SettingsWindow(QWidget):
         if btn:
             btn.setChecked(True)
 
-        self._doubao_api_key_input.setText(self._config.get("doubao_api_key", ""))
-        self._doubao_endpoint_input.setText(self._config.get("doubao_endpoint_id", ""))
-        self._deepseek_api_key_input.setText(self._config.get("deepseek_api_key", ""))
+        for name, field in self._polish_key_inputs.items():
+            field.setText(self._config.get(f"{name}_api_key", ""))
+        self._realtime_polish_check.setChecked(self._config.get("realtime_polish", False))
 
         self._refresh_dict_list()
 
@@ -1028,17 +1027,15 @@ class SettingsWindow(QWidget):
         self._refresh_credential_visibility()
 
     def _refresh_credential_visibility(self):
-        """按识别引擎 + 润色模型联动显示需要的凭证字段。
-        阿里 Key 在 ASR=阿里 或 润色=通义 时都需要，故独立控制显隐。"""
+        """识别与润色各自独立：ASR 凭证只看引擎，润色 Key 只看润色模型。"""
         engine_type = self._engine_combo.currentData()
         provider = self._polish_provider_combo.currentData()
         self._volc_api_widget.setVisible(engine_type == "volcengine")
-        self._alibaba_api_widget.setVisible(
-            engine_type == "alibaba" or provider == "qwen"
-        )
-        self._qwen_polish_widget.setVisible(provider == "qwen")
-        self._deepseek_polish_widget.setVisible(provider == "deepseek")
-        self._doubao_polish_widget.setVisible(provider == "doubao")
+        self._alibaba_api_widget.setVisible(engine_type == "alibaba")
+        for name, widget in self._polish_key_widgets.items():
+            widget.setVisible(provider == name)
+        self._polish_off_hint.setVisible(provider == "off")
+        self._realtime_polish_check.setVisible(provider != "off")
 
     def _on_apply(self):
         engine_type = self._engine_combo.currentData()
@@ -1062,9 +1059,9 @@ class SettingsWindow(QWidget):
         else:
             self._config["polish_strength"] = "medium"
 
-        self._config["doubao_api_key"] = self._doubao_api_key_input.text()
-        self._config["doubao_endpoint_id"] = self._doubao_endpoint_input.text()
-        self._config["deepseek_api_key"] = self._deepseek_api_key_input.text()
+        for name, field in self._polish_key_inputs.items():
+            self._config[f"{name}_api_key"] = field.text().strip()
+        self._config["realtime_polish"] = self._realtime_polish_check.isChecked()
 
         if self._new_hotkey_keys is not None:
             self._config["hotkey"] = self._new_hotkey_keys

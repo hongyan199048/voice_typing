@@ -20,6 +20,15 @@ from voice_typing.ui.overlay import OverlayWindow
 from voice_typing.recorder import Recorder
 
 
+# 润色厂商 → (base_url, model, config 中的 API Key 字段)。全部走 OpenAI 兼容接口，
+# 所以一份调用代码即可，新增厂商只加一行。
+_LLM_PROVIDERS = {
+    "deepseek": ("https://api.deepseek.com", "deepseek-chat", "deepseek_api_key"),
+    "glm": ("https://open.bigmodel.cn/api/paas/v4", "glm-4-flash", "glm_api_key"),
+    "minimax": ("https://api.minimaxi.com/v1", "MiniMax-Text-01", "minimax_api_key"),
+}
+
+
 def _build_polish_messages(system_prompt, user_text):
     """构建润色消息：用分隔符把转写文本包成"数据"，防止 LLM 把其中的问句当指令去回答。"""
     wrapped = (
@@ -203,11 +212,16 @@ class VoiceTypingApp(QObject):
             self._type_text(polished_text)
             QTimer.singleShot(2200, self._overlay.reset)
 
-    # ---- 实时润色：录音过程中 debounce 触发 ----
+    # ---- 实时润色：录音过程中 debounce 触发（可选，默认关闭）----
+
+    def _realtime_polish_enabled(self):
+        """默认只在最终文本后润色；开关打开且润色未关闭时才提前跑。"""
+        return (self._config.get("realtime_polish", False)
+                and self._resolve_polish_provider() != "off")
 
     def _on_asr_text_update(self, text):
         """ASR 实时文字更新 → 重置 debounce 计时器"""
-        if not self._is_recording or not text:
+        if not self._is_recording or not text or not self._realtime_polish_enabled():
             return
         # 取消进行中的润色
         self._polish_cancel_event.set()
@@ -243,7 +257,7 @@ class VoiceTypingApp(QObject):
         prompt = self._POLISH.get(strength, self._POLISH["medium"])
         prompt += self._build_vocabulary_hint()
 
-        polished = self._call_llm_stream_with_cancel(prompt, raw_text)
+        polished = self._call_llm(prompt, raw_text, self._polish_cancel_event)
         if polished is None:
             polished = raw_text
 
@@ -253,82 +267,41 @@ class VoiceTypingApp(QObject):
             self.polish_done.emit(polished)
 
     def _resolve_polish_provider(self):
-        """润色模型选择：显式配置优先；未配置则按已填 Key 自动推断（兼容旧行为）"""
+        """润色模型：显式配置优先，未配置时按已填 Key 推断，都没有则不润色。
+        与 ASR 引擎无关——识别和润色各配各的。"""
         provider = self._config.get("polish_provider", "")
         if provider:
             return provider
-        if self._config.get("deepseek_api_key"):
-            return "deepseek"
-        if self._config.get("engine", "alibaba") == "volcengine":
-            return "doubao"
-        return "qwen"
+        for name, (_, _, key_field) in _LLM_PROVIDERS.items():
+            if self._config.get(key_field):
+                return name
+        return "off"
 
-    def _provider_order(self):
-        """返回润色模型尝试顺序：选中的优先，其余作为回退（各方法未配置时返回 None 自动跳过）"""
-        chosen = self._resolve_polish_provider()
-        return [chosen] + [p for p in ("deepseek", "doubao", "qwen") if p != chosen]
-
-    def _call_llm_stream_with_cancel(self, system_prompt, user_text):
-        """流式调用 LLM（可中途取消），按用户选择的润色模型路由，失败回退其它。"""
-        methods = {
-            "deepseek": self._call_deepseek_stream_cancellable,
-            "doubao": self._call_doubao_stream_cancellable,
-            "qwen": self._call_llm_qwen,
-        }
-        for prov in self._provider_order():
-            result = methods[prov](system_prompt, user_text)
-            if result is not None:
-                return result
-        return None
-
-    def _call_deepseek_stream_cancellable(self, system_prompt, user_text):
-        """DeepSeek 流式润色，每个 chunk 检查取消"""
-        try:
-            from openai import OpenAI
-            api_key = self._config.get("deepseek_api_key", "")
-            if not api_key:
-                return None
-            client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-            stream = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=_build_polish_messages(system_prompt, user_text),
-                temperature=0.3, timeout=30, stream=True,
-            )
-            chunks = []
-            for chunk in stream:
-                if self._polish_cancel_event.is_set():
-                    return None
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta.content
-                if not delta:
-                    continue
-                chunks.append(delta)
-                self.polish_progress.emit("".join(chunks))
-            return "".join(chunks).strip() if chunks else None
-        except Exception:
+    def _call_llm(self, system_prompt, user_text, cancel_event=None):
+        """流式调用所选润色模型，边收 token 边推送浮窗。
+        未配置 / 失败 / 被取消都返回 None，由调用方回退原始文本（不跨厂商重试）。"""
+        provider = self._resolve_polish_provider()
+        entry = _LLM_PROVIDERS.get(provider)
+        if entry is None:
             return None
-
-    def _call_doubao_stream_cancellable(self, system_prompt, user_text):
-        """豆包流式润色，每个 chunk 检查取消"""
+        base_url, model, key_field = entry
+        api_key = self._config.get(key_field, "")
+        if not api_key:
+            print(f"[Polish] {provider} 未配置 API Key，回退原文")
+            return None
         try:
             from openai import OpenAI
-            api_key = self._config.get("doubao_api_key", "")
-            endpoint_id = self._config.get("doubao_endpoint_id", "")
-            if not api_key or not endpoint_id:
-                return None
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://ark.cn-beijing.volces.com/api/v3",
-            )
+            client = OpenAI(api_key=api_key, base_url=base_url)
             stream = client.chat.completions.create(
-                model=endpoint_id,
+                model=model,
                 messages=_build_polish_messages(system_prompt, user_text),
-                temperature=0.3, timeout=30, stream=True,
+                temperature=0.3,
+                timeout=30,
+                stream=True,
             )
             chunks = []
             for chunk in stream:
-                if self._polish_cancel_event.is_set():
+                if cancel_event is not None and cancel_event.is_set():
                     return None
                 if not chunk.choices:
                     continue
@@ -337,15 +310,20 @@ class VoiceTypingApp(QObject):
                     continue
                 chunks.append(delta)
                 self.polish_progress.emit("".join(chunks))
-            return "".join(chunks).strip() if chunks else None
-        except Exception:
+            final = "".join(chunks).strip()
+            print(f"[Polish] {provider} 完成，{len(user_text)} 字 → {len(final)} 字")
+            return final or None
+        except Exception as e:
+            print(f"[Polish] {provider} 异常: {type(e).__name__}: {e}")
             return None
 
     # 短于该字数的语音结果跳过 LLM 润色，直接粘贴（追求短句低延迟）
     _POLISH_BYPASS_CHARS = 15
 
     def _run_polish(self, raw_text):
-        if len(raw_text) < self._POLISH_BYPASS_CHARS:
+        """最终文本润色。润色关闭、文本过短或调用失败时，直接使用原始文本。"""
+        if (self._resolve_polish_provider() == "off"
+                or len(raw_text) < self._POLISH_BYPASS_CHARS):
             self.polish_done.emit(self._apply_alias_map(raw_text))
             return
 
@@ -353,153 +331,10 @@ class VoiceTypingApp(QObject):
         prompt = self._POLISH.get(strength, self._POLISH["medium"])
         prompt += self._build_vocabulary_hint()
 
-        # 润色路由：按用户选择的润色模型，失败回退其它
-        methods = {
-            "deepseek": self._call_llm_deepseek_stream,
-            "doubao": self._call_llm_doubao_stream,
-            "qwen": self._call_llm_qwen,
-        }
-        polished = None
-        for prov in self._provider_order():
-            polished = methods[prov](prompt, raw_text)
-            if polished is not None:
-                break
-
+        polished = self._call_llm(prompt, raw_text)
         if polished is None:
             polished = raw_text
-
-        polished = self._apply_alias_map(polished)
-        self.polish_done.emit(polished)
-
-    @staticmethod
-    def _call_llm_qwen(system_prompt, user_text):
-        """调用 Qwen-Plus，成功返回文字，失败返回 None"""
-        try:
-            from dashscope import Generation
-            import dashscope
-            from voice_typing.core.config import load_config
-            config = load_config()
-            api_key = config.get("alibaba_api_key", "")
-            if not api_key:
-                return None
-            dashscope.api_key = api_key
-            response = Generation.call(
-                model="qwen-plus",
-                messages=_build_polish_messages(system_prompt, user_text),
-                result_format="message",
-            )
-            if response.status_code == 200:
-                return response.output.choices[0].message.content.strip()
-            return None
-        except Exception:
-            return None
-
-    def _call_llm_deepseek_stream(self, system_prompt, user_text):
-        """流式调用 DeepSeek：边收 token 边推送到浮窗，返回完整文本。失败返回 None。"""
-        try:
-            from openai import OpenAI
-            api_key = self._config.get("deepseek_api_key", "")
-            if not api_key:
-                return None
-            print(f"[Polish] DeepSeek 流式润色，原文 {len(user_text)} 字")
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.deepseek.com",
-            )
-            stream = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=_build_polish_messages(system_prompt, user_text),
-                temperature=0.3,
-                timeout=30,
-                stream=True,
-            )
-            chunks = []
-            first_chunk = True
-            for chunk in stream:
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta.content
-                if not delta:
-                    continue
-                if first_chunk:
-                    print(f"[Polish] 首个 chunk: {delta!r}")
-                    first_chunk = False
-                chunks.append(delta)
-                self.polish_progress.emit("".join(chunks))
-            final = "".join(chunks).strip()
-            print(f"[Polish] DeepSeek 完成，输出 {len(final)} 字")
-            return final
-        except Exception as e:
-            print(f"[Polish] DeepSeek 异常: {type(e).__name__}: {e}")
-            return None
-
-    @staticmethod
-    def _call_llm_doubao(system_prompt, user_text):
-        """调用豆包，成功返回文字，失败返回 None"""
-        try:
-            from openai import OpenAI
-            from voice_typing.core.config import load_config
-            config = load_config()
-            api_key = config.get("doubao_api_key", "")
-            endpoint_id = config.get("doubao_endpoint_id", "")
-            if not api_key or not endpoint_id:
-                return None
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://ark.cn-beijing.volces.com/api/v3",
-            )
-            response = client.chat.completions.create(
-                model=endpoint_id,
-                messages=_build_polish_messages(system_prompt, user_text),
-                temperature=0.3,
-                timeout=30,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception:
-            return None
-
-    def _call_llm_doubao_stream(self, system_prompt, user_text):
-        """流式调用豆包：边收 token 边推送到浮窗，返回完整文本。失败返回 None。"""
-        try:
-            from openai import OpenAI
-            from voice_typing.core.config import load_config
-            config = load_config()
-            api_key = config.get("doubao_api_key", "")
-            endpoint_id = config.get("doubao_endpoint_id", "")
-            if not api_key or not endpoint_id:
-                print(f"[Polish] 豆包润色未配置: api_key={'已填' if api_key else '空'}, endpoint_id={'已填' if endpoint_id else '空'}")
-                return None
-            print(f"[Polish] 启动流式润色，原文 {len(user_text)} 字")
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://ark.cn-beijing.volces.com/api/v3",
-            )
-            stream = client.chat.completions.create(
-                model=endpoint_id,
-                messages=_build_polish_messages(system_prompt, user_text),
-                temperature=0.3,
-                timeout=30,
-                stream=True,
-            )
-            chunks = []
-            first_chunk = True
-            for chunk in stream:
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta.content
-                if not delta:
-                    continue
-                if first_chunk:
-                    print(f"[Polish] 收到首个 chunk: {delta!r}")
-                    first_chunk = False
-                chunks.append(delta)
-                self.polish_progress.emit("".join(chunks))
-            final = "".join(chunks).strip()
-            print(f"[Polish] 流式完成，输出 {len(final)} 字")
-            return final
-        except Exception as e:
-            print(f"[Polish] 豆包润色异常: {type(e).__name__}: {e}")
-            return None
+        self.polish_done.emit(self._apply_alias_map(polished))
 
     def _apply_alias_map(self, text):
         """将发音别名替换为正确词汇（支持逗号分隔多个别名）"""

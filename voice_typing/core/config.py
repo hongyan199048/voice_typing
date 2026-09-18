@@ -18,9 +18,13 @@ DEFAULT_CONFIG = {
     "custom_vocabulary": [],        # 自定义热词列表：["CUDA", "GitHub", "Python"]
     "phrase_id": "",                # 阿里云热词表ID（UUID，由VocabularyService创建）
     "polish_strength": "medium",    # 润色强度：light / medium / strong
-    "polish_provider": "",          # 润色模型：qwen / deepseek / doubao（空=按已配置自动选）
-    "doubao_api_key": "",           # 豆包 ARK API Key
-    "doubao_endpoint_id": "",       # 豆包推理接入点 ID（ep-xxxxxxxxxxxx）
+    "polish_provider": "",          # 润色模型：off / deepseek / glm / minimax（空=按已填 Key 推断）
+    "realtime_polish": False,       # 录音过程中提前润色（默认关闭，只在最终文本后润色）
+    "deepseek_api_key": "",         # DeepSeek API Key
+    "glm_api_key": "",              # 智谱 GLM API Key
+    "minimax_api_key": "",          # MiniMax API Key
+    "doubao_api_key": "",           # 豆包 ARK API Key（旧版润色，保留兼容）
+    "doubao_endpoint_id": "",       # 豆包推理接入点 ID（旧版润色，保留兼容）
     "volc_boosting_table_id": "",   # 火山 ASR 热词表 ID（控制台创建，做识别偏置）
     "stats": {
         "total_seconds": 0,          # 累计录音秒数
@@ -44,6 +48,9 @@ def load_config():
     for k, v in DEFAULT_CONFIG.items():
         if k not in data:
             data[k] = v
+    # 旧版润色厂商（千问/豆包方舟）已下线，置空以便按已填 Key 重新推断
+    if data.get("polish_provider") in ("qwen", "doubao"):
+        data["polish_provider"] = ""
     return data
 
 
