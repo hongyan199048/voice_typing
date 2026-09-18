@@ -23,44 +23,37 @@ VoiceType 是一个 Ubuntu 环境下的 AI 语音转文字桌面应用，支持�
 ## 项目结构
 
 ```
-voice_typing-app/
-├── voice_typing/              # 核心包
-│   ├── __init__.py           # 包初始化，版本号，__dev__ 开发标识
+voice-typing-app/
+├── voice_typing/              # 核心包（唯一源码真相）
+│   ├── __init__.py           # 版本号，__dev__ 开发标识
 │   ├── __main__.py           # 入口：python -m voice_typing
-│   ├── app.py                # VoiceTypingApp 主应用（含两阶段润色流水线）
+│   ├── app.py                # VoiceTypingApp 主应用 + 润色路由
 │   ├── recorder.py           # Recorder 录音控制器
-│   ├── core/                 # 核心功能模块
-│   │   ├── __init__.py
-│   │   ├── config.py         # 配置管理（~/.config/voice_typing/config.json）
-│   │   ├── hotkey.py         # 全局快捷键管理（pynput，含卡键检测线程）
-│   │   └── vocabulary.py     # 热词表管理（阿里云 Paraformer）
-│   ├── engine/               # ASR 引擎抽象层
-│   │   ├── __init__.py
-│   │   ├── base.py           # BaseEngine 抽象基类
-│   │   ├── alibaba.py        # 阿里云 Paraformer 实时识别
-│   │   └── volcengine.py     # 火山引擎 BigModel ASR + 豆包润色
-│   └── ui/                   # PyQt5 界面
-│       ├── __init__.py
-│       ├── styles.py         # 暗黑主题样式
-│       ├── settings.py       # 设置窗口（右上角显示版本号）
-│       ├── overlay.py        # 实时转写浮窗（可拖拽，圆点锚定动效）
-│       └── resources/        # 资源文件
-│           └── checkmark.svg
-├── scripts/                  # 工具脚本
-│   └── start.sh
-├── debian/                   # deb 打包配置
-│   ├── DEBIAN/control
-│   └── usr/
-│       ├── bin/voice-typing  # 可执行文件入口
-│       └── share/voice-typing/  # 安装目标路径
-├── docs/                     # 文档
-│   └── INSTALL.md
-├── main.py                   # 兼容旧版入口（调用 voice_typing.app）
-├── setup.py                  # pip 安装配置
-├── requirements.txt
-├── README.md
-├── CLAUDE.md
-└── .gitignore
+│   ├── core/                 # config.py / hotkey.py / vocabulary.py
+│   ├── engine/               # base.py / alibaba.py / volcengine.py
+│   └── ui/                   # styles.py / settings.py / overlay.py / resources/
+├── packaging/                 # 打包配置（deb / rpm / AppImage 共用）
+│   ├── control               # deb 控制文件
+│   ├── voice-typing.spec     # rpm spec
+│   ├── postinst.sh           # deb postinst 与 rpm %post 共用
+│   ├── launcher.py           # 安装后的 /usr/bin/voice-typing
+│   ├── voice-typing.desktop
+│   ├── icons/                # hicolor 各尺寸图标
+│   ├── Dockerfile.rpm        # fedora + rpmbuild
+│   ├── build-rpm-inner.sh
+│   └── appimage/             # Dockerfile + build-inner.sh
+├── scripts/
+│   ├── build-packages.sh     # 一键产出三种包 → dist/
+│   ├── start.sh
+│   └── monitor_latency.sh
+├── tests/
+│   ├── test_polish_routing.py   # 润色路由（解耦 / 关闭 / 失败回退）
+│   └── test_volcengine.py       # 火山 ASR 协议帧解析与鉴权头
+├── docs/                      # ROADMAP.md / font_sizes.md / archive/
+├── main.py                    # 兼容旧版入口
+├── setup.py / requirements.txt / README.md / CLAUDE.md
+├── build/                     # 构建中间物（gitignore）
+└── dist/                      # 三种安装包产物（gitignore）
 ```
 
 ---
@@ -78,7 +71,7 @@ voice_typing-app/
 | 云端润色 | 火山引擎 ARK (豆包) | 结构化 Prompt 清洗润色 |
 | 卡键检测 | 后台线程定时扫描 | 超过 10s 未释放的按键自动清除 |
 | X11 修饰键清理 | xdotool keyup | 粘贴前释放所有卡住的修饰键 |
-| 打包 | dpkg | 生成 .deb 安装包 |
+| 打包 | docker + dpkg / rpmbuild / appimage | 一套配置产出 deb / rpm / AppImage |
 | 发布 | gh (GitHub CLI) | 创建 Release 并上传 deb |
 
 ---
@@ -176,27 +169,36 @@ cd /home/admin123/Development/voice-typing-app
 python3 main.py
 ```
 
-### 打包 deb
+### 打包（deb / rpm / AppImage）
 
 ```bash
-# 1. 同步源文件到 debian/ 目录
-cp voice_typing/core/hotkey.py debian/usr/share/voice-typing/voice_typing/core/
-cp voice_typing/app.py debian/usr/share/voice-typing/voice_typing/
-
-# 2. 更新版本号（__init__.py、setup.py、debian/DEBIAN/control 等 5 处）
-
-# 3. 清理旧缓存
-rm -rf debian/usr/share/voice-typing/voice_typing/**/__pycache__
-
-# 4. 构建
-dpkg-deb --build debian voice-typing_1.4.1_amd64.deb
+./scripts/build-packages.sh            # 三种全建，产物落在 dist/
+./scripts/build-packages.sh deb rpm    # 只建指定的
 ```
 
-### 安装 deb
+宿主机只需要 docker（免 sudo）。rpm 在 fedora 容器内用 rpmbuild 构建，
+AppImage 在 ubuntu:20.04 容器内以 python-appimage 的 manylinux Python 为基座打包，
+系统里不装任何打包工具。
+
+三种包的内容从 `voice_typing/` 现场取，**不存在第二份源码副本**（旧的 `debian/`
+目录已删除）。发行版仓库里没有的纯 Python 依赖（`requirements.txt` 去掉走系统包的
+PyQt5 / pyaudio）由构建脚本现场派生清单，打包时 vendor 进
+`/usr/share/voice-typing/vendor`——加新依赖只改 `requirements.txt` 一处。
+
+| 包 | 体积 | 依赖处理 |
+|----|------|----------|
+| deb | ~12M | PyQt5 / pyaudio 走 apt；纯 Python 依赖已 vendor |
+| rpm | ~11M | PyQt5 / pyaudio 走 dnf（包名 `python3-qt5`）；同上 |
+| AppImage | ~108M | Python、Qt、portaudio 全部自带；仅需宿主有 xclip / xdotool |
+
+升级版本号只需改 `voice_typing/__init__.py`，构建脚本从那里读取。
+
+### 安装
 
 ```bash
-wget -q https://github.com/hongyan199048/voice_typing/releases/download/v1.4.1/voice-typing_1.4.1_amd64.deb
-sudo dpkg -i voice-typing_1.4.1_amd64.deb
+sudo dpkg -i dist/voice-typing_1.5.0_amd64.deb      # Debian / Ubuntu
+sudo dnf install dist/voice-typing-1.5.0-1.x86_64.rpm  # Fedora / RHEL
+chmod +x dist/VoiceType-1.5.0-x86_64.AppImage && ./dist/VoiceType-*.AppImage
 ```
 
 ### 发布 GitHub Release
@@ -242,7 +244,7 @@ gh release create v1.4.1 voice-typing_1.4.1_amd64.deb \
 5. **版本号管理**：
    - `voice_typing/__init__.py` 中 `__dev__ = True` 时，设置界面显示 `版本号-dev`
    - 发布 Release 前：`__dev__ = False`，发布后：`__dev__ = True`
-   - 升级版本号需改 5 个文件：`__init__.py`（2 处）、`setup.py`、`debian/DEBIAN/control`、`debian/.../setup.py`
+   - 升级版本号只需改 `voice_typing/__init__.py`，`scripts/build-packages.sh` 从那里读取并写进三种包
 
 ---
 
