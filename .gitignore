@@ -39,6 +39,8 @@ models/
 # 日志
 *.log
 
-# deb 构建产物
+# 打包产物（scripts/build-packages.sh 的输出）
 *.deb
 *.deb.*
+/build/
+/dist/
