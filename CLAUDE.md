@@ -269,5 +269,5 @@ gh release create v1.4.1 voice-typing_1.4.1_amd64.deb \
 ## 相关链接
 
 - GitHub 仓库：https://github.com/hongyan199048/voice_typing
-- 阿里云 DashScope：https://dashscope.console.aliyun.com/
+- 阿里云百炼（原 DashScope，旧域名 dashscope.console.aliyun.com 已于 2026-08-01 下线）：https://bailian.console.aliyun.com/
 - 火山引擎 ARK：https://console.volcengine.com/ark/
