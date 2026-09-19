@@ -3,18 +3,14 @@ Version: 0.0.0-placeholder
 Section: utils
 Priority: optional
 Architecture: amd64
-Depends: python3 (>= 3.8), python3-pyqt5, python3-pyaudio, xclip, xdotool
+Depends: python3 (>= 3.10), python3-pyqt5, python3-pyaudio, xclip, xdotool
 Maintainer: hongyan199048 <hongyan199048@example.com>
+Homepage: https://github.com/hongyan199048/voice_typing
 Description: 实时语音转文字桌面应用
  VoiceType 是一个基于 PyQt5 的语音转文字桌面应用。
  .
- 功能特性：
-  - 支持阿里云 Paraformer 和 faster-whisper 本地引擎
-  - 支持火山引擎 BigModel ASR + 豆包大模型润色
-  - 大模型润色（Qwen/豆包）让输出更连续流畅，三档强度可调
-  - 全局快捷键 (Ctrl+Alt+S) 控制录音
-  - 实时浮窗显示录音状态和识别结果
-  - 自动粘贴识别结果到光标处
-  - 暗黑主题 GUI 设置界面
-  - 自定义词库纠正识别错误
-
+ 全局快捷键按住说话，松开后自动识别并粘贴到光标位置。
+ 支持阿里云 Paraformer 与豆包流式语音识别 2.0 两种云端引擎，
+ 识别结果可选交由 DeepSeek / GLM / MiniMax 润色，也可关闭润色直接输出原文。
+ .
+ 需要 X11 会话：全局快捷键监听与自动粘贴均依赖 X11。
