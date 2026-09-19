@@ -1129,7 +1129,13 @@ class SettingsWindow(QWidget):
 
         for name, field in self._polish_key_inputs.items():
             self._config[f"{name}_api_key"] = field.text().strip()
-        self._config["realtime_polish"] = self._realtime_polish_check.isChecked()
+        # 润色关闭时「提前润色」那行是隐藏的，勾选状态必须跟着清掉；
+        # 否则这个看不见的 True 会留在配置里，下次选回某个润色模型
+        # 就莫名其妙带着提前润色跑（缓存前缀 → 只粘出前半句，见 app.py）。
+        self._config["realtime_polish"] = (
+            self._config["polish_provider"] != "off"
+            and self._realtime_polish_check.isChecked()
+        )
 
         if self._new_hotkey_keys is not None:
             self._config["hotkey"] = self._new_hotkey_keys

@@ -83,6 +83,7 @@ class VoiceTypingApp(QObject):
         self._polish_cancel_event = threading.Event()
         self._polish_thread = None
         self._cached_polished_text = ""
+        self._polish_source_text = ""   # 缓存对应的原文，用来判断缓存是否已过期
         self._is_recording = False
 
         self._settings = SettingsWindow(self._config, self._hotkey)
@@ -141,6 +142,7 @@ class VoiceTypingApp(QObject):
         self._recording_start_time = time.time()
         self._is_recording = True
         self._cached_polished_text = ""
+        self._polish_source_text = ""
         self._polish_cancel_event.set()
         self._polish_debounce_timer.stop()
         self._overlay._polish_active = False
@@ -181,8 +183,8 @@ class VoiceTypingApp(QObject):
 
         self._overlay.stop_recording()
 
-        if self._cached_polished_text:
-            # 实时润色已完成，直接使用
+        if not self._cached_polish_is_stale(text):
+            # 实时润色已完成，且润的就是这段完整文本，直接使用
             self._overlay.set_text(self._cached_polished_text)
             self._update_stats(self._cached_polished_text)
             self._type_text(self._cached_polished_text)
@@ -217,6 +219,17 @@ class VoiceTypingApp(QObject):
             QTimer.singleShot(2200, self._overlay.reset)
 
     # ---- 实时润色：录音过程中 debounce 触发（可选，默认关闭）----
+
+    def _cached_polish_is_stale(self, final_text):
+        """实时润色缓存是否已过期。
+
+        提前润色是 debounce 触发的：用户中途停顿 ≥1s 就会拿当时的前半段去润色。
+        若此后还有新语音（且没有再一次停顿到 1s），缓存里就是残缺的前缀，
+        直接粘贴会丢掉后半段——所以只有原文与最终识别文本完全一致时才算数。
+        """
+        if not self._cached_polished_text:
+            return True
+        return self._polish_source_text != final_text
 
     def _realtime_polish_enabled(self):
         """默认只在最终文本后润色；开关打开且润色未关闭时才提前跑。"""
@@ -254,6 +267,7 @@ class VoiceTypingApp(QObject):
         if len(raw_text) < self._POLISH_BYPASS_CHARS:
             result = self._apply_alias_map(raw_text)
             self._cached_polished_text = result
+            self._polish_source_text = raw_text
             self.polish_done.emit(result)
             return
 
@@ -268,6 +282,7 @@ class VoiceTypingApp(QObject):
         polished = self._apply_alias_map(polished)
         if not self._polish_cancel_event.is_set():
             self._cached_polished_text = polished
+            self._polish_source_text = raw_text
             self.polish_done.emit(polished)
 
     def _resolve_polish_provider(self):

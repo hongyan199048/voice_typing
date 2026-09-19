@@ -21,9 +21,13 @@ class _Stub:
     _build_vocabulary_hint = VoiceTypingApp._build_vocabulary_hint
     _POLISH = VoiceTypingApp._POLISH
     _POLISH_BYPASS_CHARS = VoiceTypingApp._POLISH_BYPASS_CHARS
+    _run_realtime_polish_stream = VoiceTypingApp._run_realtime_polish_stream
+    _cached_polish_is_stale = VoiceTypingApp._cached_polish_is_stale
 
     def __init__(self, config):
         self._config = config
+        self._cached_polished_text = ""
+        self._polish_source_text = ""
         self.emitted = []
         self.polish_done = type("S", (), {"emit": lambda _s, t: self.emitted.append(t)})()
         self.polish_progress = type("S", (), {"emit": lambda _s, t: None})()
@@ -80,6 +84,28 @@ def test_realtime_polish_off_by_default():
                   "realtime_polish": True})._realtime_polish_enabled()
     # 润色关闭时，开关打开也不跑
     assert not _Stub({"polish_provider": "off", "realtime_polish": True})._realtime_polish_enabled()
+
+
+class _FakeOverlay:
+    """只提供 _run_realtime_polish_stream 读的那一个属性。"""
+
+    def __init__(self, shown_text):
+        self._text_label = type("L", (), {"text": lambda _s: shown_text})()
+
+
+def test_midway_pause_polish_is_not_reused_for_longer_text():
+    """中途停顿润过的前缀属于过期缓存，最终文本更长时必须重润，不能拿前缀去粘贴。"""
+    import threading
+
+    stub = _Stub({"polish_provider": "off"})
+    stub._polish_cancel_event = threading.Event()
+    stub._overlay = _FakeOverlay("前半句，")
+
+    stub._run_realtime_polish_stream()          # 模拟停顿 1s：只润了当时浮窗里的前半句
+    assert stub._polish_source_text == "前半句，"
+    assert not stub._cached_polish_is_stale("前半句，")        # 就说到这儿 → 缓存可用
+    assert stub._cached_polish_is_stale("前半句，后半句。")     # 后面又说了 → 缓存作废
+    assert _Stub({})._cached_polish_is_stale("随便")           # 从没缓存过 → 视为不可用
 
 
 if __name__ == "__main__":

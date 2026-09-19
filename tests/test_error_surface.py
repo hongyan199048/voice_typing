@@ -37,11 +37,13 @@ class _Stub:
     """只借 VoiceTypingApp 的收尾逻辑，不启动 Qt / 热键 / 引擎。"""
 
     _on_recording_done = VoiceTypingApp._on_recording_done
+    _cached_polish_is_stale = VoiceTypingApp._cached_polish_is_stale
 
     def __init__(self, last_error=""):
         self._overlay = _FakeOverlay()
         self._engine = _FakeEngine(last_error)
         self._cached_polished_text = ""
+        self._polish_source_text = ""
         self._recording_start_time = time.time()
         self._recording_duration = 0
 
