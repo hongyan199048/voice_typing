@@ -2,9 +2,10 @@
 
 import subprocess
 import os
+import threading
 
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QByteArray, QSize, QRect, QRectF
-from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush, QPen
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QByteArray, QSize, QRect, QRectF, QUrl
+from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush, QPen, QDesktopServices
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
@@ -16,6 +17,7 @@ from PyQt5.QtWidgets import (
 )
 
 from voice_typing.core.config import load_config, save_config, build_correct_words
+from voice_typing.core.updater import check_for_update
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.ui.overlay import OVERLAY_THEMES, DEFAULT_OVERLAY_THEME
@@ -221,6 +223,7 @@ class SettingsWindow(QWidget):
 
     engine_changed = pyqtSignal(object)
     overlay_style_changed = pyqtSignal(str)
+    update_found = pyqtSignal(str, str)   # (最新版本号, Release 页面地址)
 
     def __init__(self, config, hotkey_manager):
         super().__init__()
@@ -229,6 +232,7 @@ class SettingsWindow(QWidget):
         self._engine = None
         self._nav_btns = []
         self._new_hotkey_keys = None
+        self.update_found.connect(self._on_update_found)
 
         self._init_ui()
         self._init_tray()
@@ -262,10 +266,22 @@ class SettingsWindow(QWidget):
         logo.setStyleSheet("font-size: 16pt; font-weight: bold; color: #f0f0f0; padding: 8px 8px 4px 8px;")
         sidebar_layout.addWidget(logo)
 
+        self._version = __version__
         ver_text = f"v{__version__}-dev" if __dev__ else f"v{__version__}"
         ver_label = QLabel(ver_text)
         ver_label.setStyleSheet("font-size: 10pt; color: #666; padding: 0 8px 8px 8px;")
         sidebar_layout.addWidget(ver_label)
+
+        # 有新版本时才显示，点击跳到 Release 页面
+        self._update_label = QLabel()
+        self._update_label.setVisible(False)
+        self._update_label.setStyleSheet(
+            "font-size: 10pt; color: #22c55e; padding: 0 8px 8px 8px;"
+        )
+        self._update_label.setTextFormat(Qt.RichText)
+        self._update_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self._update_label.linkActivated.connect(self._open_update_url)
+        sidebar_layout.addWidget(self._update_label)
 
         # 导航按钮
         nav_items = [
@@ -313,6 +329,27 @@ class SettingsWindow(QWidget):
         self._stack.addWidget(self._build_dictionary_page())
         self._stack.addWidget(self._build_settings_page())
         root.addWidget(self._stack)
+
+        # 窗口显示后再查，不挡启动
+        QTimer.singleShot(0, self._check_for_update)
+
+    # ---------- 更新检查 ----------
+
+    def _check_for_update(self):
+        """后台查一次最新 Release；没网/查不到就什么都不做，标签保持隐藏。"""
+        def worker():
+            result = check_for_update(self._version)
+            if result and result["update"]:
+                self.update_found.emit(result["latest"], result["url"])
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_update_found(self, latest, url):
+        self._update_label.setText(f'<a href="{url}">新版本 v{latest} 可用</a>')
+        self._update_label.setVisible(True)
+
+    def _open_update_url(self, url):
+        QDesktopServices.openUrl(QUrl(url))
 
     # ---------- 导航 ----------
 

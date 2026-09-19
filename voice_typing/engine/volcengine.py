@@ -187,6 +187,7 @@ class VolcengineEngine(BaseEngine):
                 max_size=10_000_000,
                 ping_interval=20,
             ) as ws:
+                print(f"[Volcengine] 模型档位: {self._resource_id}")
                 response_headers = getattr(
                     getattr(ws, "response", None), "headers", None
                 ) or getattr(ws, "response_headers", None)

@@ -80,8 +80,10 @@ class AlibabaEngine(BaseEngine):
         self._queue = queue.Queue()
         self._running = True
 
+        model = "paraformer-realtime-v2"
+        print(f"[Alibaba] 模型: {model}")
         self._recognition = Recognition(
-            model="paraformer-realtime-v2",
+            model=model,
             format="pcm",
             sample_rate=16000,
             callback=self._callback,
