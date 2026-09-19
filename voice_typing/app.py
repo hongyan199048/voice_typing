@@ -64,7 +64,7 @@ class VoiceTypingApp(QObject):
         self.polish_done.connect(self._on_polish_done)
         self.polish_progress.connect(self._on_polish_progress)
 
-        self._hotkey = HotkeyManager(self._config.get("hotkey", ["ctrl", "alt", "v"]))
+        self._hotkey = HotkeyManager(self._config.get("hotkey", []))
         self._hotkey.set_callbacks(
             on_start=self._on_recording_start_callback,
             on_stop=self._on_recording_stop_callback,

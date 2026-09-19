@@ -467,7 +467,10 @@ class SettingsWindow(QWidget):
 
         if self._engine and self._engine.is_available():
             self._home_engine_name.setText(f"引擎已就绪：{self._engine.name}")
-            self._home_engine_status.setText("快捷键可用，随时可以开始语音输入")
+            if self._config.get("hotkey"):
+                self._home_engine_status.setText("快捷键可用，随时可以开始语音输入")
+            else:
+                self._home_engine_status.setText("请到「设置」页面录制快捷键")
             self._sidebar_indicator.setStyleSheet(
                 "background: #22c55e; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px;"
             )
