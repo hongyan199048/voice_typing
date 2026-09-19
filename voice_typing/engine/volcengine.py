@@ -164,6 +164,7 @@ class VolcengineEngine(BaseEngine):
         self._text_callback = cb
 
     def start(self):
+        self.last_error = ""
         self._running = True
         self._audio_queue = queue.Queue()
         self._final_text = ""
@@ -243,6 +244,7 @@ class VolcengineEngine(BaseEngine):
                 await asyncio.gather(send_loop(), recv_loop())
         except Exception as e:
             print(f"[Volcengine] WS 连接异常: {e}")
+            self.last_error = "识别失败，请检查网络和 API Key"
         finally:
             self._ws_done.set()
 

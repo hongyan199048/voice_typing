@@ -60,9 +60,11 @@ build_payload() {
         python:3.10 \
         pip install --quiet --no-compile --target /stage/usr/share/voice-typing/vendor \
                     -r /build/vendor-requirements.txt
-    # pip --target 会带一堆 dist-info 和测试目录，清掉省体积
+    # 清掉 pycache 和测试目录省体积。
+    # dist-info 必须保留：httpx2 等包在 import 时用 importlib.metadata 读自己的
+    # 版本号，删掉元数据会让 openai 直接 import 失败（润色功能静默失效）。
     find "$STAGE/usr/share/voice-typing/vendor" \
-         \( -name "__pycache__" -o -name "tests" -o -name "*.dist-info" \) \
+         \( -name "__pycache__" -o -name "tests" \) \
          -type d -exec rm -rf {} + 2>/dev/null || true
     du -sh "$STAGE/usr/share/voice-typing/vendor" | sed 's/^/    vendor: /'
 }

@@ -192,7 +192,11 @@ class VoiceTypingApp(QObject):
             self._overlay.set_text(text)
             threading.Thread(target=self._run_polish, args=(text,), daemon=True).start()
         else:
-            self._overlay.reset()
+            error = getattr(self._engine, "last_error", "")
+            if error:
+                self._overlay.show_error(error)
+            else:
+                self._overlay.reset()
 
     @pyqtSlot(str)
     def _on_polish_progress(self, partial_text):

@@ -48,6 +48,7 @@ class Recorder(QObject):
             )
         except Exception:
             # 麦克风打开失败：终止 PyAudio 防资源泄漏，并让推流线程尽快结束
+            self._engine.last_error = "麦克风打开失败"
             self._recording = False
             self._p.terminate()
             return
@@ -79,6 +80,7 @@ class Recorder(QObject):
             print(f"[PERF] ⑤ 引擎就绪 → {t1:.3f} (引擎初始化 {(t1-t0)*1000:.0f}ms)")
         except Exception as e:
             print(f"[Recorder] 引擎初始化失败: {e}")
+            self._engine.last_error = "识别引擎启动失败，请检查配置"
             self._engine_ready.set()  # 即使失败也解除等待，避免死锁
             return
 

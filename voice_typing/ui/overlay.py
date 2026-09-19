@@ -52,6 +52,9 @@ OVERLAY_THEMES = {
 }
 DEFAULT_OVERLAY_THEME = "glass"
 
+_TEXT_STYLE = "color: #f0f0f0; font-size: 10pt; background: transparent; padding: 0px;"
+_ERROR_STYLE = "color: #f87171; font-size: 10pt; background: transparent; padding: 0px;"
+
 
 class StatusIndicator(QWidget):
     """状态指示器：绿色圆球（待机）/ 红色圆球（录音）"""
@@ -164,9 +167,7 @@ class OverlayWindow(QWidget):
         self._polish_active = False  # 实时润色进行中时，忽略 ASR 原始文字
 
         self._text_label = QLabel("")
-        self._text_label.setStyleSheet(
-            "color: #f0f0f0; font-size: 10pt; background: transparent; padding: 0px;"
-        )
+        self._text_label.setStyleSheet(_TEXT_STYLE)
         self._text_label.setWordWrap(False)
         self._text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self._text_label.hide()  # 初始隐藏
@@ -378,8 +379,21 @@ class OverlayWindow(QWidget):
         width = 24 + 12 + label_width + 32
         self._animate_to_size(width, height)
 
+    def show_error(self, msg: str):
+        """显示一行错误提示，2.5s 后自动复位。不写剪贴板、不触发粘贴。"""
+        self._polish_active = False
+        self._waveform.hide()
+        self._text_label.setStyleSheet(_ERROR_STYLE)
+        self._text_label.setText(msg)
+        self._text_label.show()
+
+        label_width, height = self._calc_label_geometry(msg)
+        self._animate_to_size(24 + 12 + label_width + 32, height)
+        QTimer.singleShot(2500, self.reset)
+
     def reset(self):
         """重置到待机状态"""
+        self._text_label.setStyleSheet(_TEXT_STYLE)
         self._indicator.set_recording(False)
         self._waveform.stop()
         self._text_label.hide()
