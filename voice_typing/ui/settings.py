@@ -5,10 +5,11 @@ import os
 import threading
 
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QByteArray, QSize, QRect, QRectF, QUrl
-from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush, QPen, QDesktopServices
+from PyQt5.QtGui import (QIcon, QPixmap, QPainter, QColor, QBrush, QPen, QDesktopServices,
+                         QPainterPath, QRadialGradient, QFont, QFontMetrics)
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLabel,
     QLineEdit, QComboBox, QPushButton,
     QSystemTrayIcon, QMenu, QAction, QApplication, QMessageBox,
     QListWidget, QListWidgetItem, QScrollArea, QCheckBox,
@@ -21,6 +22,7 @@ from voice_typing.core.updater import check_for_update
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.ui.overlay import OVERLAY_THEMES, DEFAULT_OVERLAY_THEME
+from voice_typing.ui.styles import mesh_gradient
 from voice_typing.core.vocabulary import sync_vocabulary
 
 
@@ -49,9 +51,8 @@ class _DarkComboBox(QComboBox):
 
 
 def _draw_logo(painter, size):
-    """绘制「笔意留白」logo：圆角暗底 + 缺口绿色圆弧"""
+    """绘制「笔意留白」logo：圆角暗底 + 缺口晕染色圆弧"""
     bg = QColor(13, 13, 13)
-    accent = QColor(34, 197, 94)
 
     corner = max(2.0, size * 0.22)
     painter.setRenderHint(QPainter.Antialiasing)
@@ -73,7 +74,7 @@ def _draw_logo(painter, size):
     diameter = size - 2 * margin
     rect = QRectF(margin, margin, diameter, diameter)
 
-    pen = QPen(accent, stroke_w)
+    pen = QPen(QBrush(mesh_gradient(rect)), stroke_w)
     pen.setCapStyle(Qt.RoundCap)
     painter.setPen(pen)
     painter.setBrush(Qt.NoBrush)
@@ -125,9 +126,8 @@ def _make_eye_icon(visible=True):
 
 CARD_BG = QColor("#1a1a1a")
 CARD_HOVER = QColor("#222222")
-CARD_SELECTED = QColor("#22c55e")
 CARD_TEXT = QColor("#f0f0f0")
-CARD_TEXT_SELECTED = QColor("#0d0d0d")
+CARD_TEXT_SELECTED = QColor("#1a0b05")
 CARD_RADIUS = 10
 CARD_PADDING_H = 14
 CARD_PADDING_V = 12
@@ -172,12 +172,7 @@ class CardDelegate(QStyledItemDelegate):
         selected = option.state & QStyle.State_Selected
         hovered = option.state & QStyle.State_MouseOver
 
-        if selected:
-            bg = CARD_SELECTED
-        elif hovered:
-            bg = CARD_HOVER
-        else:
-            bg = CARD_BG
+        bg = CARD_HOVER if hovered else CARD_BG
 
         fm = painter.fontMetrics()
         text = index.data(Qt.DisplayRole) or ""
@@ -195,7 +190,7 @@ class CardDelegate(QStyledItemDelegate):
             rect.width(),
             card_h,
         )
-        painter.setBrush(QBrush(bg))
+        painter.setBrush(QBrush(mesh_gradient(QRectF(content_rect))) if selected else QBrush(bg))
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(content_rect, CARD_RADIUS, CARD_RADIUS)
 
@@ -216,6 +211,89 @@ class CardDelegate(QStyledItemDelegate):
         text_h = max(line_h, r.height())
         card_h = text_h + 2 * CARD_PADDING_V
         return QSize(0, card_h + 2 * CARD_MARGIN_V)
+
+
+class HeroBanner(QWidget):
+    """主页顶部的产品介绍：晕染光斑背景 + Logo + 渐变标语 + 三步用法。
+    标语和光斑构图取自宣传视频；渐变文字 QSS 做不到，所以整块自绘。"""
+
+    TITLE = "按住说话，松开上屏"
+    SUBTITLE = "专为 Ubuntu 打造的 AI 语音输入 · 光标在哪，文字就到哪"
+    # 光斑 (中心x, 中心y, 横半径, 纵半径, 颜色)，位置均为横幅宽高的比例。构图取自视频
+    # --vt-mesh 的三处椭圆光；颜色用橙 + 玫红——琥珀在暗底上低透明度会发棕发灰
+    BLOBS = ((0.12, 0.30, 0.36, 0.72, "#F26A2A"),
+             (0.42, 0.95, 0.33, 0.85, "#E8458B"),
+             (0.88, 0.10, 0.25, 0.60, "#E8458B"))
+    GLOW_ALPHA = 100
+
+    def __init__(self):
+        super().__init__()
+        self.setFixedHeight(160)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        w, h = rect.width(), rect.height()
+        card = QPainterPath()
+        card.addRoundedRect(rect, 14, 14)
+
+        # ① 底色 + 低透明度晕染光斑
+        p.fillPath(card, QColor("#141414"))
+        p.save()
+        p.setClipPath(card)
+        for cx, cy, rx, ry, color in self.BLOBS:
+            grad = QRadialGradient(0, 0, 1)
+            c = QColor(color)
+            c.setAlpha(self.GLOW_ALPHA)
+            grad.setColorAt(0, c)
+            c.setAlpha(0)
+            grad.setColorAt(1, c)
+            p.save()
+            p.translate(cx * w, cy * h)
+            p.scale(rx * w, ry * h)
+            p.fillRect(QRectF(-1, -1, 2, 2), QBrush(grad))
+            p.restore()
+        p.restore()
+        p.setPen(QPen(QColor("#1e1e1e"), 1))
+        p.drawPath(card)
+
+        # ② Logo
+        logo = 76
+        p.save()
+        p.translate(32, (h - logo) / 2)
+        _draw_logo(p, logo)
+        p.restore()
+        x = 32 + logo + 28
+
+        # ③ 渐变标语 + 副标题
+        font = QFont(self.font())
+        font.setPointSize(21)
+        font.setBold(True)
+        p.setFont(font)
+        fm = QFontMetrics(font)
+        title_rect = QRectF(x, 26, fm.horizontalAdvance(self.TITLE), fm.height())
+        p.setPen(QPen(QBrush(mesh_gradient(title_rect)), 1))
+        p.drawText(title_rect, Qt.AlignLeft | Qt.AlignVCenter, self.TITLE)
+
+        font.setPointSize(10)
+        font.setBold(False)
+        p.setFont(font)
+        fm = QFontMetrics(font)
+        p.setPen(QColor("#8a8a8a"))
+        p.drawText(QRectF(x, title_rect.bottom() + 4, w - x, fm.height()),
+                   Qt.AlignLeft | Qt.AlignVCenter, self.SUBTITLE)
+
+        # ④ 三步用法：按住快捷键 → 说话 → 松开，文字自动上屏
+        y = title_rect.bottom() + fm.height() + 22
+        cap_h = fm.height() + 10
+        steps = [("按住快捷键", None), ("→", "arrow"),
+                 ("说话", None), ("→", "arrow"), ("松开，文字自动上屏", None)]
+        for text, kind in steps:
+            tw = fm.horizontalAdvance(text)
+            p.setPen(QColor("#F26A2A" if kind == "arrow" else "#e4e4e4"))
+            p.drawText(QRectF(x, y, tw, cap_h), Qt.AlignLeft | Qt.AlignVCenter, text)
+            x += tw + 10
 
 
 class SettingsWindow(QWidget):
@@ -276,7 +354,7 @@ class SettingsWindow(QWidget):
         self._update_label = QLabel()
         self._update_label.setVisible(False)
         self._update_label.setStyleSheet(
-            "font-size: 10pt; color: #22c55e; padding: 0 8px 8px 8px;"
+            "font-size: 10pt; color: #F26A2A; padding: 0 8px 8px 8px;"
         )
         self._update_label.setTextFormat(Qt.RichText)
         self._update_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
@@ -345,7 +423,10 @@ class SettingsWindow(QWidget):
         threading.Thread(target=worker, daemon=True).start()
 
     def _on_update_found(self, latest, url):
-        self._update_label.setText(f'<a href="{url}">新版本 v{latest} 可用</a>')
+        self._update_label.setText(
+            f'<a href="{url}" style="color: #F26A2A; text-decoration: none;">'
+            f'新版本 v{latest} 可用</a>'
+        )
         self._update_label.setVisible(True)
 
     def _open_update_url(self, url):
@@ -372,6 +453,10 @@ class SettingsWindow(QWidget):
         layout.setContentsMargins(40, 32, 40, 32)
         layout.setSpacing(14)
 
+        self._hero = HeroBanner()
+        layout.addWidget(self._hero)
+        layout.addSpacing(10)
+
         title = QLabel("使用统计")
         title.setObjectName("page-title")
         layout.addWidget(title)
@@ -384,7 +469,7 @@ class SettingsWindow(QWidget):
         cards_layout.setContentsMargins(0, 0, 0, 0)
         cards_layout.setSpacing(16)
 
-        # 只有首项用绿色强调，其余走白色——单一强调色是成熟设置页的共同做法
+        # 只有首项用晕染色强调，其余走白色——单一强调色是成熟设置页的共同做法
         stats_defs = [
             ("total_seconds", "使用时长", "分钟", True),
             ("total_characters", "输入字数", "字", False),
@@ -586,12 +671,12 @@ class SettingsWindow(QWidget):
         title_row.addWidget(title)
         title_row.addStretch()
 
-        del_btn = QPushButton("删除选中")
-        del_btn.clicked.connect(self._delete_dict_item)
-        title_row.addWidget(del_btn)
+        self._dict_del_btn = QPushButton("删除选中")
+        self._dict_del_btn.clicked.connect(self._delete_dict_item)
+        title_row.addWidget(self._dict_del_btn)
         layout.addLayout(title_row)
 
-        hint = QLabel("添加专业词汇提升识别；可填「易错词」，火山识别时自动纠正为正确词汇")
+        hint = QLabel("添加常用的专业词汇，识别更准确。列表中按住 Ctrl / Shift 可多选，一次删除多条")
         hint.setObjectName("subtitle")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -606,38 +691,71 @@ class SettingsWindow(QWidget):
             }
         """)
         self._dict_list.setItemDelegate(CardDelegate())
+        self._dict_list.setSelectionMode(QListWidget.ExtendedSelection)
+        self._dict_list.itemSelectionChanged.connect(self._on_dict_selection_changed)
         self._dict_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._dict_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
-        layout.addWidget(self._dict_list)
+        layout.addWidget(self._dict_list, 1)
 
         self._dict_empty_label = QLabel("暂无词条，添加专业词汇以提升识别准确率")
         self._dict_empty_label.setObjectName("subtitle")
         self._dict_empty_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self._dict_empty_label)
 
-        term_row = QHBoxLayout()
+        # 添加词条：词汇（必填）← 易错词（选填），箭头方向与列表里的「词汇 ← 易错词」一致；
+        # 下方用一句例子直观示意替换效果
+        add_card = QGroupBox("添加词条")
+        grid = QGridLayout(add_card)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(8)
+
+        term_label = QLabel('词汇 <span style="color: #F26A2A;">· 必填</span>')
+        term_label.setObjectName("field-label")
+        grid.addWidget(term_label, 0, 0)
+        alias_label = QLabel('易错词 <span style="color: #8a8a8a;">· 选填，多个用逗号隔开</span>')
+        alias_label.setObjectName("field-label")
+        grid.addWidget(alias_label, 0, 2)
+
+        self._dict_status = QLabel("")
+        self._dict_status.setObjectName("status")
+        grid.addWidget(self._dict_status, 0, 3, Qt.AlignRight)
+
         self._dict_term_input = QLineEdit()
-        self._dict_term_input.setPlaceholderText("词汇（如：Mid360、ROS2）")
+        self._dict_term_input.setPlaceholderText("如：Claude Code")
+        self._dict_term_input.setMinimumHeight(48)
         self._dict_term_input.returnPressed.connect(self._add_dict_item)
-        term_row.addWidget(self._dict_term_input, 2)
+        grid.addWidget(self._dict_term_input, 1, 0)
+
+        arrow = QLabel("←")
+        arrow.setStyleSheet("font-size: 16pt; color: #F26A2A;")
+        arrow.setToolTip("识别结果里出现右边的易错词时，自动替换成左边的词汇")
+        grid.addWidget(arrow, 1, 1)
 
         self._dict_alias_input = QLineEdit()
-        self._dict_alias_input.setPlaceholderText("易错词，逗号分隔（可选，如：麦德360,埋360）")
+        self._dict_alias_input.setPlaceholderText("如：cloud code, cloudcode")
+        self._dict_alias_input.setMinimumHeight(48)
         self._dict_alias_input.returnPressed.connect(self._add_dict_item)
-        term_row.addWidget(self._dict_alias_input, 3)
+        grid.addWidget(self._dict_alias_input, 1, 2)
 
         add_btn = QPushButton("添加")
         add_btn.setObjectName("accent")
         add_btn.clicked.connect(self._add_dict_item)
         add_btn.setFixedWidth(80)
-        term_row.addWidget(add_btn)
+        add_btn.setMinimumHeight(48)
+        grid.addWidget(add_btn, 1, 3)
 
-        self._dict_status = QLabel("")
-        self._dict_status.setObjectName("status")
-        term_row.addWidget(self._dict_status)
-        layout.addLayout(term_row)
+        example = QLabel(
+            '效果：识别出「用 <s>cloud code</s> 写代码」，自动改成「用 '
+            '<span style="color: #F26A2A;">Claude Code</span> 写代码」<br>'
+            '只填词汇也有用：它会作为热词发给识别引擎，让引擎更容易认出这个词'
+        )
+        example.setObjectName("field-hint")
+        example.setTextFormat(Qt.RichText)
+        grid.addWidget(example, 2, 0, 1, 4)
 
-        layout.addStretch()
+        grid.setColumnStretch(0, 2)
+        grid.setColumnStretch(2, 3)
+        layout.addWidget(add_card)
         return page
 
     def _refresh_dict_list(self):
@@ -684,14 +802,25 @@ class SettingsWindow(QWidget):
         self._dict_term_input.setFocus()
         self._save_dict()
 
+    def _on_dict_selection_changed(self):
+        n = len(self._dict_list.selectedItems())
+        self._dict_del_btn.setText(f"删除选中（{n}）" if n > 1 else "删除选中")
+
     def _delete_dict_item(self):
-        item = self._dict_list.currentItem()
-        if item:
+        items = self._dict_list.selectedItems()
+        if not items:
+            return
+        # 多选删除先确认，防止 Ctrl+A 误删整个词库
+        if len(items) > 1 and QMessageBox.question(
+            self, "删除词条", f"确定删除选中的 {len(items)} 个词条？"
+        ) != QMessageBox.Yes:
+            return
+        for item in items:
             self._dict_list.takeItem(self._dict_list.row(item))
-            if self._dict_list.count() == 0:
-                self._dict_list.hide()
-                self._dict_empty_label.show()
-            self._save_dict()
+        if self._dict_list.count() == 0:
+            self._dict_list.hide()
+            self._dict_empty_label.show()
+        self._save_dict()
 
     def _save_dict(self):
         vocab = []
@@ -1226,7 +1355,7 @@ class SettingsWindow(QWidget):
 
     def _record_hotkey(self):
         self._hotkey_btn.setText("按下快捷键组合...")
-        self._hotkey_btn.setStyleSheet("border-color: #22c55e; color: #22c55e;")
+        self._hotkey_btn.setStyleSheet("border-color: #F26A2A; color: #F26A2A;")
         self._hotkey.stop()
 
         def on_done(keys):

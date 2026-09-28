@@ -3,8 +3,26 @@
 层次只用颜色和字重区分，字号严格遵守 font_sizes.md 的三档体系（21/16/10pt）。
 色板：
     #0a0a0a 侧栏   #0d0d0d 页面   #141414 卡片   #1c1c1c 控件
-    #f0f0f0 主文字 #8a8a8a 次要   #666666 占位   #22c55e 强调
+    #f0f0f0 主文字 #8a8a8a 次要   #666666 占位
+强调色取自宣传视频：琥珀 #F7A035 → 橙 #F26A2A → 玫红 #E8458B 三色晕染。
+色块（按钮、选中项、勾选框）用 MESH 渐变；细描边、焦点框用实色橙。
+绿色只保留给「就绪 / 已保存」这类状态语义，红色只给录音与错误。
 """
+
+from PyQt5.QtGui import QColor, QLinearGradient
+
+MESH_COLORS = ("#F7A035", "#F26A2A", "#E8458B")
+_MESH = ("qlineargradient(x1:0, y1:0, x2:1, y2:1, "
+         "stop:0 #F7A035, stop:0.5 #F26A2A, stop:1 #E8458B)")
+
+
+def mesh_gradient(rect):
+    """三色晕染沿 rect 对角线铺开，供 QPainter 自绘部件使用"""
+    grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
+    for pos, color in zip((0.0, 0.5, 1.0), MESH_COLORS):
+        grad.setColorAt(pos, QColor(color))
+    return grad
+
 
 DARK_STYLE = """
 /* 全局 */
@@ -21,14 +39,14 @@ QLineEdit {
     border-radius: 10px;
     padding: 9px 13px;
     color: #f0f0f0;
-    selection-background-color: #22c55e;
+    selection-background-color: #F26A2A;
     selection-color: #0d0d0d;
 }
 QLineEdit:hover {
     border-color: #3a3a3a;
 }
 QLineEdit:focus {
-    border-color: #22c55e;
+    border-color: #F26A2A;
     background: #202020;
 }
 QLineEdit::placeholder {
@@ -52,17 +70,16 @@ QPushButton:pressed {
     background: #181818;
 }
 QPushButton#accent {
-    background: #22c55e;
-    color: #08130c;
-    border: 1px solid #22c55e;
+    background: MESH;
+    color: #1a0b05;
+    border: 1px solid transparent;
     font-weight: bold;
 }
 QPushButton#accent:hover {
-    background: #2ade6d;
-    border-color: #2ade6d;
+    border-color: rgba(255, 255, 255, 110);
 }
 QPushButton#accent:pressed {
-    background: #16a34a;
+    border-color: rgba(0, 0, 0, 90);
 }
 QPushButton#danger {
     background: transparent;
@@ -75,7 +92,7 @@ QPushButton#danger:hover {
     color: #ef4444;
 }
 
-/* 侧边导航按钮 — 选中时左侧绿条 */
+/* 侧边导航按钮 — 选中时左侧晕染色条 */
 QPushButton#nav-btn {
     background: transparent;
     border: none;
@@ -91,8 +108,9 @@ QPushButton#nav-btn:hover {
     color: #d8d8d8;
 }
 QPushButton#nav-btn[active="true"] {
-    background: #16211a;
-    border-left: 2px solid #22c55e;
+    background: #221510;
+    border-left: 2px solid qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #F7A035, stop:0.5 #F26A2A, stop:1 #E8458B);
     color: #f0f0f0;
     font-weight: bold;
 }
@@ -108,7 +126,7 @@ QComboBox {
     outline: none;
 }
 QComboBox:hover { border-color: #3a3a3a; background: #202020; }
-QComboBox:focus { border-color: #22c55e; }
+QComboBox:focus { border-color: #F26A2A; }
 QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
@@ -129,8 +147,8 @@ QComboBox QListView {
     margin: 0;
     outline: none;
     color: #f0f0f0;
-    selection-background-color: #22c55e;
-    selection-color: #08130c;
+    selection-background-color: MESH;
+    selection-color: #1a0b05;
     show-decoration-selected: 1;
 }
 QComboBox QAbstractItemView::item,
@@ -144,8 +162,8 @@ QComboBox QListView::item {
 }
 QComboBox QAbstractItemView::item:selected,
 QComboBox QListView::item:selected {
-    background-color: #22c55e;
-    color: #08130c;
+    background-color: MESH;
+    color: #1a0b05;
 }
 QComboBox QAbstractItemView::item:hover,
 QComboBox QListView::item:hover {
@@ -164,7 +182,7 @@ QProgressBar {
     font-size: 10pt;
 }
 QProgressBar::chunk {
-    background: #22c55e;
+    background: MESH;
     border-radius: 4px;
 }
 
@@ -210,11 +228,11 @@ QCheckBox::indicator {
     background: #1c1c1c;
 }
 QCheckBox::indicator:hover {
-    border-color: #22c55e;
+    border-color: #F26A2A;
 }
 QCheckBox::indicator:checked {
-    background: #22c55e;
-    border-color: #22c55e;
+    background: MESH;
+    border-color: #F26A2A;
     image: url(voice_typing/ui/resources/checkmark.svg);
 }
 
@@ -227,14 +245,14 @@ QRadioButton::indicator {
     background: #1c1c1c;
 }
 QRadioButton::indicator:hover {
-    border-color: #22c55e;
+    border-color: #F26A2A;
 }
 QRadioButton::indicator:checked {
     background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
                                 fx:0.5, fy:0.5,
-                                stop:0 #08130c, stop:0.45 #08130c,
-                                stop:0.5 #22c55e, stop:1 #22c55e);
-    border-color: #22c55e;
+                                stop:0 #1a0b05, stop:0.45 #1a0b05,
+                                stop:0.5 #F7A035, stop:1 #E8458B);
+    border-color: #F26A2A;
 }
 
 /* 标签 */
@@ -267,14 +285,14 @@ QLabel#error {
     font-size: 10pt;
 }
 
-/* 统计卡片数值 — 统一白色，绿色只留给强调项 */
+/* 统计卡片数值 — 统一白色，晕染色只留给强调项 */
 QLabel#stat-value {
     font-size: 21pt;
     font-weight: bold;
     color: #f0f0f0;
 }
 QLabel#stat-value[accent="true"] {
-    color: #22c55e;
+    color: #F26A2A;  /* QSS 渐变用作文字色会退化成末端色，文字一律用实色橙 */
 }
 QLabel#stat-label {
     font-size: 10pt;
@@ -314,8 +332,8 @@ QListWidget::item:hover {
     border-color: #2a2a2a;
 }
 QListWidget::item:selected {
-    background: #16211a;
-    border-color: #22c55e;
+    background: #221510;
+    border-color: #F26A2A;
     color: #f0f0f0;
 }
 
@@ -345,7 +363,7 @@ QToolTip {
     color: #f0f0f0;
     font-size: 10pt;
 }
-"""
+""".replace("MESH", _MESH)
 
 OVERLAY_STYLE = """
 QWidget#overlay {

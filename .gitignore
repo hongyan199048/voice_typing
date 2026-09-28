@@ -39,6 +39,13 @@ models/
 # 日志
 *.log
 
+# colcon / ROS 构建残留（不属于本项目）
+/install/
+/log/
+
+# 宣传视频工程（体积大，另行管理）
+/promo-video/
+
 # 打包产物（scripts/build-packages.sh 的输出）
 *.deb
 *.deb.*

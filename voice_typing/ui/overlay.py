@@ -1,11 +1,25 @@
 """屏幕下方浮窗 — 实时显示语音转写文字"""
 
+import math
 import random
 from PyQt5.QtCore import (Qt, QTimer, QRect, QRectF, QSize, QPropertyAnimation,
                           QEasingCurve, pyqtProperty)
 from PyQt5.QtGui import (QPainter, QColor, QBrush, QPen, QFontMetrics, QFont,
-                         QLinearGradient)
+                         QGradient, QLinearGradient, QRadialGradient, QConicalGradient)
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QApplication
+
+from voice_typing.ui.styles import MESH_COLORS
+
+# 晕染缓慢流动：转一整圈的秒数、刷新间隔。每次只重绘浮窗这几十像素，开销可忽略
+FLOW_PERIOD_S = 6.0
+FLOW_TICK_MS = 50
+
+
+def _set_loop_stops(grad, colors):
+    """首尾同色的一圈色标，渐变平移或旋转时没有接缝"""
+    colors = list(colors) + [colors[0]]
+    for i, color in enumerate(colors):
+        grad.setColorAt(i / (len(colors) - 1), color)
 
 
 # 浮窗外观主题。全部是纯绘制参数，加一档只是往字典里加一行。
@@ -14,7 +28,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QApplicat
 OVERLAY_THEMES = {
     "glass": {
         "label": "玻璃 — 高透明，顶部高光",
-        "fill": (32, 38, 34, 150),
+        "fill": (38, 34, 32, 150),
         "border": (255, 255, 255, 64),
         "border_w": 1.4,
         "highlight": True,
@@ -27,52 +41,56 @@ OVERLAY_THEMES = {
         "highlight": False,
     },
     "neon": {
-        "label": "霓虹 — 绿色描边 + 外发光",
-        "fill": (10, 13, 11, 236),
-        "border": (34, 197, 94, 225),
+        "label": "霓虹 — 橙色描边 + 外发光",
+        "fill": (13, 11, 10, 236),
+        "border": (242, 106, 42, 225),
         "border_rec": (239, 68, 68, 225),
         "border_w": 1.6,
         "highlight": False,
-        "glow": (34, 197, 94),
+        "glow": (242, 106, 42),
         "glow_rec": (239, 68, 68),
         "glow_alpha": 46,
         "glow_layers": 7,
     },
     "aurora": {
-        "label": "极光 — 渐变描边",
-        "fill": (16, 19, 17, 232),
-        "grad_border": [(34, 197, 94, 230), (56, 229, 190, 230), (34, 197, 94, 230)],
-        "grad_border_rec": [(239, 68, 68, 230), (245, 158, 11, 230), (239, 68, 68, 230)],
+        "label": "晕染 — 琥珀 / 橙 / 玫红渐变描边",
+        "fill": (19, 16, 16, 232),
+        "grad_border": [(247, 160, 53, 230), (242, 106, 42, 230), (232, 69, 139, 230)],
         "border_w": 1.6,
         "highlight": True,
-        "glow": (34, 197, 94),
+        "glow": (242, 106, 42),
         "glow_alpha": 22,
         "glow_layers": 5,
     },
 }
-DEFAULT_OVERLAY_THEME = "glass"
+DEFAULT_OVERLAY_THEME = "aurora"
 
 _TEXT_STYLE = "color: #f0f0f0; font-size: 10pt; background: transparent; padding: 0px;"
 _ERROR_STYLE = "color: #f87171; font-size: 10pt; background: transparent; padding: 0px;"
 
 
 class StatusIndicator(QWidget):
-    """状态指示器：绿色圆球（待机）/ 红色圆球（录音）"""
+    """状态指示器：流动晕染球。状态靠「节奏」区分，而不只是颜色——
+    16px 的球上单纯变色几乎察觉不到，余光对亮度和大小变化更敏感。"""
+
+    # 状态 → (晕染配色, 高光转一圈的秒数, 球外效果)
+    STATES = {
+        "idle": (MESH_COLORS, 4.0, None),                                    # 平静慢转
+        "detected": (("#FDE047", "#EAB308", "#F7A035"), 0.6, None),          # 按下瞬间：黄色急转
+        "recording": (("#FF8A65", "#EF4444", "#E8458B"), 1.0, "halo"),       # 在听：红色快转 + 扩散光环
+        "processing": (("#FFD27A", "#F7A035", "#F26A2A"), 2.0, "spinner"),   # 识别定稿/润色中：琥珀 + 转圈
+    }
+    HALO_PERIOD_S = 1.0
+    SPINNER_PERIOD_S = 0.8
 
     def __init__(self):
         super().__init__()
         self.setFixedSize(24, 24)
-        self._recording = False
-        self._custom_color = None  # 自定义颜色（用于调试闪黄）
+        self.state = "idle"
+        self.t = 0.0  # 动画时钟（秒），由浮窗统一推进
 
-    def set_recording(self, recording: bool):
-        self._recording = recording
-        self._custom_color = None
-        self.update()
-
-    def set_color(self, color):
-        """直接设置颜色（调试用）"""
-        self._custom_color = color
+    def set_state(self, state: str):
+        self.state = state
         self.update()
 
     def paintEvent(self, event):
@@ -80,14 +98,35 @@ class StatusIndicator(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
-        if self._custom_color:
-            color = self._custom_color
-        elif self._recording:
-            color = QColor(239, 68, 68)  # 红色
-        else:
-            color = QColor(34, 197, 94)  # 绿色
+        colors, spin_s, effect = self.STATES[self.state]
 
-        painter.setBrush(QBrush(color))
+        # ① 球外效果
+        if effect == "halo":
+            # 光环：从球边缘扩散到控件边缘并淡出
+            p = (self.t % self.HALO_PERIOD_S) / self.HALO_PERIOD_S
+            ring = QColor(colors[1])
+            ring.setAlpha(int(170 * (1 - p)))
+            painter.setBrush(QBrush(ring))
+            r = 8 + 4 * p
+            painter.drawEllipse(QRectF(12 - r, 12 - r, 2 * r, 2 * r))
+        elif effect == "spinner":
+            # 彗星弧线绕球顺时针转：头亮尾淡，通用的「处理中」语义
+            grad = QConicalGradient(12, 12, -self.t / self.SPINNER_PERIOD_S * 360)
+            tail = QColor(colors[1])
+            tail.setAlpha(0)
+            grad.setColorAt(0.0, QColor(colors[1]))
+            grad.setColorAt(0.7, tail)
+            painter.setPen(QPen(QBrush(grad), 2))
+            painter.drawEllipse(QRectF(1.5, 1.5, 21, 21))
+            painter.setPen(Qt.NoPen)
+
+        # ② 晕染球：一个提亮的高光点绕球心公转，亮度在动，远比单纯变色显眼
+        angle = (0.63 + self.t / spin_s) * 2 * math.pi
+        grad = QRadialGradient(12, 12, 9, 12 + 4.5 * math.cos(angle), 12 + 4.5 * math.sin(angle))
+        grad.setColorAt(0.0, QColor(colors[0]).lighter(150))
+        for pos, color in zip((0.3, 0.65, 1.0), colors):
+            grad.setColorAt(pos, QColor(color))
+        painter.setBrush(QBrush(grad))
         painter.drawEllipse(4, 4, 16, 16)
 
 
@@ -107,6 +146,7 @@ class WaveformWidget(QWidget):
         self._wave_heights = [0.0] * self.BAR_COUNT
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update_wave)
+        self.phase = 0.0  # 晕染流动相位，由浮窗统一推进
 
     def start(self):
         self.show()
@@ -128,13 +168,17 @@ class WaveformWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
+        # 一支横跨整排波形条的循环渐变，随相位向左平移，每根条按所在位置取色
+        w = self.width()
+        grad = QLinearGradient(-self.phase * w, 0, (1 - self.phase) * w, 0)
+        grad.setSpread(QGradient.RepeatSpread)
+        _set_loop_stops(grad, [QColor(c) for c in MESH_COLORS])
+        painter.setBrush(QBrush(grad))
 
         for i, height in enumerate(self._wave_heights):
             x = i * (self.BAR_WIDTH + self.BAR_SPACING)
             h = int(height * self.MAX_HEIGHT)
             y = (self.height() - h) // 2
-
-            painter.setBrush(QBrush(QColor(239, 68, 68, 200)))
             painter.drawRoundedRect(x, y, self.BAR_WIDTH, h, 2, 2)
 
 
@@ -192,12 +236,19 @@ class OverlayWindow(QWidget):
         self._size_animation.setDuration(300)  # 300ms 过渡
         self._size_animation.setEasingCurve(QEasingCurve.OutCubic)
 
-        # 初始化为最小尺寸（只显示绿色圆球），先设尺寸再定位
+        # 晕染流动：一个时钟驱动圆点、波形、渐变描边
+        self._t = 0.0
+        self._phase = 0.0
+        self._flow_timer = QTimer(self)
+        self._flow_timer.timeout.connect(self._advance_flow)
+        self._flow_timer.start(FLOW_TICK_MS)
+
+        # 初始化为最小尺寸（只显示待机圆球），先设尺寸再定位
         self.resize(56 + 2 * self.PAD, 48 + 2 * self.PAD)
         self._center_on_screen()
 
     def _set_idle_size(self):
-        """待机状态：只显示绿色圆球"""
+        """待机状态：只显示晕染圆球"""
         self._animate_to_size(56, 48)
 
     def _set_recording_size(self):
@@ -211,7 +262,7 @@ class OverlayWindow(QWidget):
 
     def _animate_to_size(self, width: int, height: int):
         """平滑过渡到新尺寸。入参是内容尺寸，窗口在四周各加 PAD。
-        以红/绿圆点中心为锚点，圆点屏幕位置保持不变。"""
+        以状态圆点中心为锚点，圆点屏幕位置保持不变。"""
         win_w = width + 2 * self.PAD
         win_h = height + 2 * self.PAD
         current_rect = self.geometry()
@@ -240,10 +291,20 @@ class OverlayWindow(QWidget):
             self._theme = name
             self.update()
 
+    def _advance_flow(self):
+        """推进晕染相位，只重绘用到渐变的部分（波形显示时自带 20fps 重绘）"""
+        self._t += FLOW_TICK_MS / 1000
+        self._phase = (self._t / FLOW_PERIOD_S) % 1.0
+        self._indicator.t = self._t
+        self._waveform.phase = self._phase
+        self._indicator.update()
+        if "grad_border" in OVERLAY_THEMES.get(self._theme, {}):
+            self.update()
+
     def paintEvent(self, event):
         """按主题分层绘制：外发光 → 填充 → 顶部高光 → 描边"""
         theme = OVERLAY_THEMES.get(self._theme, OVERLAY_THEMES[DEFAULT_OVERLAY_THEME])
-        recording = self._indicator._recording
+        recording = self._indicator.state == "recording"
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -280,14 +341,13 @@ class OverlayWindow(QWidget):
             painter.setBrush(QBrush(grad))
             painter.drawRoundedRect(cap, radius, radius)
 
-        # ④ 描边：纯色或渐变
+        # ④ 描边：纯色，或绕胶囊缓慢旋转的环形渐变
         width = theme.get("border_w", 1.0)
         stops = theme.get("grad_border_rec" if recording else "grad_border") \
             or theme.get("grad_border")
         if stops:
-            grad = QLinearGradient(cap.topLeft(), cap.topRight())
-            for i, color in enumerate(stops):
-                grad.setColorAt(i / max(1, len(stops) - 1), QColor(*color))
+            grad = QConicalGradient(cap.center(), -self._phase * 360)
+            _set_loop_stops(grad, [QColor(*c) for c in stops])
             pen = QPen(QBrush(grad), width)
         else:
             color = theme.get("border_rec" if recording else "border") \
@@ -304,12 +364,11 @@ class OverlayWindow(QWidget):
 
     def flash_yellow(self):
         """按键检测到时闪黄色，用于延迟诊断"""
-        self._indicator.set_color(QColor(234, 179, 8))  # 黄色
-        self._indicator.update()
+        self._indicator.set_state("detected")
 
     def start_recording(self):
         """开始录音：圆球变红 + 窗口扩展开启动画 + 波形渐现"""
-        self._indicator.set_recording(True)
+        self._indicator.set_state("recording")
         self.update()
         self._text_received = False
         self._text_label.hide()
@@ -318,12 +377,20 @@ class OverlayWindow(QWidget):
 
     def _show_waveform(self):
         """延迟显示波形，与窗口扩展动画同步"""
+        if self._indicator.state != "recording":  # 80ms 内就松键了，不再显示
+            return
         self._waveform.start()
         self._waveform.show()
 
+    def start_processing(self):
+        """松开快捷键：圆球转圈表示识别定稿 / 润色中，波形停止"""
+        self._indicator.set_state("processing")
+        self.update()
+        self._waveform.stop()
+
     def stop_recording(self):
-        """停止录音：圆球变绿 + 隐藏波形"""
-        self._indicator.set_recording(False)
+        """录音与处理都结束：圆球回到待机晕染 + 隐藏波形"""
+        self._indicator.set_state("idle")
         self.update()
         self._waveform.stop()
 
@@ -394,7 +461,7 @@ class OverlayWindow(QWidget):
     def reset(self):
         """重置到待机状态"""
         self._text_label.setStyleSheet(_TEXT_STYLE)
-        self._indicator.set_recording(False)
+        self._indicator.set_state("idle")
         self._waveform.stop()
         self._text_label.hide()
         self._text_label.setText("")

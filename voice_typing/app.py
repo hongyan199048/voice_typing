@@ -170,6 +170,7 @@ class VoiceTypingApp(QObject):
         self._overlay._polish_active = False
         if self._recorder:
             self._recorder.stop()
+            self._overlay.start_processing()
 
     @pyqtSlot(str)
     def _on_recording_done(self, text):
@@ -182,7 +183,9 @@ class VoiceTypingApp(QObject):
         else:
             self._recording_duration = 0
 
-        self._overlay.stop_recording()
+        # 还要走润色时保持「处理中」，由 _on_polish_done 粘贴后再回待机
+        if not text or not self._cached_polish_is_stale(text):
+            self._overlay.stop_recording()
 
         if not self._cached_polish_is_stale(text):
             # 实时润色已完成，且润的就是这段完整文本，直接使用
@@ -215,6 +218,7 @@ class VoiceTypingApp(QObject):
 
         if not self._is_recording:
             # 录音已结束，执行粘贴
+            self._overlay.stop_recording()
             self._update_stats(polished_text)
             self._type_text(polished_text)
             QTimer.singleShot(2200, self._overlay.reset)
