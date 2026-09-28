@@ -22,7 +22,7 @@ from voice_typing.core.updater import check_for_update
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.ui.overlay import OVERLAY_THEMES, DEFAULT_OVERLAY_THEME
-from voice_typing.ui.styles import mesh_gradient
+from voice_typing.ui.styles import mesh_gradient, apply_placeholder_color
 from voice_typing.core.vocabulary import sync_vocabulary
 
 
@@ -407,6 +407,9 @@ class SettingsWindow(QWidget):
         self._stack.addWidget(self._build_dictionary_page())
         self._stack.addWidget(self._build_settings_page())
         root.addWidget(self._stack)
+
+        # 输入框建好后统一调一次占位文字颜色（QSS 管不到）
+        apply_placeholder_color(self)
 
         # 窗口显示后再查，不挡启动
         QTimer.singleShot(0, self._check_for_update)

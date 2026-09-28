@@ -9,9 +9,25 @@
 绿色只保留给「就绪 / 已保存」这类状态语义，红色只给录音与错误。
 """
 
-from PyQt5.QtGui import QColor, QLinearGradient
+from PyQt5.QtGui import QColor, QLinearGradient, QPalette
+from PyQt5.QtWidgets import QLineEdit
 
 MESH_COLORS = ("#F7A035", "#F26A2A", "#E8458B")
+PLACEHOLDER_COLOR = "#666666"
+
+
+def apply_placeholder_color(root):
+    """把 root 下所有输入框的占位文字调成灰色。
+
+    QSS 没有 ::placeholder 选择器（写了是空操作），占位色只认调色板的
+    PlaceholderText 角色；而 QSS 的 color 会被一并复制到该角色上。样式表对控件
+    调色板的这次改写发生在首次 polish 时，所以要先 ensurePolished() 逼它先跑完，
+    再用调色板盖掉。"""
+    palette = root.palette()
+    palette.setColor(QPalette.PlaceholderText, QColor(PLACEHOLDER_COLOR))
+    for edit in root.findChildren(QLineEdit):
+        edit.ensurePolished()
+        edit.setPalette(palette)
 _MESH = ("qlineargradient(x1:0, y1:0, x2:1, y2:1, "
          "stop:0 #F7A035, stop:0.5 #F26A2A, stop:1 #E8458B)")
 
@@ -48,9 +64,6 @@ QLineEdit:hover {
 QLineEdit:focus {
     border-color: #F26A2A;
     background: #202020;
-}
-QLineEdit::placeholder {
-    color: #666;
 }
 
 /* 按钮 */
