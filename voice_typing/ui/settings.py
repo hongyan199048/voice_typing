@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate, QStyle, QListView,
 )
 
-from voice_typing.core.config import load_config, save_config, build_correct_words
+from voice_typing.core.config import load_config, save_config, build_hotwords
 from voice_typing.core.updater import check_for_update
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
@@ -715,6 +715,7 @@ class SettingsWindow(QWidget):
                 self._config["phrase_id"] = phrase_id
 
         save_config(self._config)
+        self._create_engine()  # 新词立即作为热词生效，无需重启
         self._dict_status.setText("已保存")
         QTimer.singleShot(2000, lambda: self._dict_status.setText(""))
 
@@ -1063,7 +1064,7 @@ class SettingsWindow(QWidget):
                     "volc_asr_resource_id", "volc.seedasr.sauc.duration"
                 ),
                 boosting_table_id=self._config.get("volc_boosting_table_id", ""),
-                correct_words=build_correct_words(self._config),
+                hotwords=build_hotwords(self._config),
             )
             engine.initialize()
         else:

@@ -40,8 +40,7 @@ def _build_auth_headers(*, api_key: str, resource_id: str) -> dict:
     }
 
 
-def _build_request_config(*, boosting_table_id: str,
-                          correct_words: dict) -> dict:
+def _build_request_config(*, boosting_table_id: str, hotwords: list) -> dict:
     """构造 Seed-ASR 2.0 首包参数，避免把 ASR 与后续 LLM 润色混在一起。"""
     config = {
         "user": {"uid": "voice-typing"},
@@ -69,12 +68,11 @@ def _build_request_config(*, boosting_table_id: str,
     if boosting_table_id:
         corpus["boosting_table_id"] = boosting_table_id
 
-    # 官方协议没有内联 correct_words 字段。把本地词典的正确词作为热词直传；
+    # 热词直传（上限约 100 token），与 boosting_table_id 可同时生效；
     # 别名替换仍由应用在识别后本地执行。
-    terms = list(dict.fromkeys(term for term in correct_words.values() if term))
-    if terms:
+    if hotwords:
         corpus["context"] = json.dumps(
-            {"hotwords": [{"word": term} for term in terms]},
+            {"hotwords": [{"word": term} for term in hotwords]},
             ensure_ascii=False,
         )
     if corpus:
@@ -142,11 +140,11 @@ class VolcengineEngine(BaseEngine):
     name = "豆包流式语音识别 2.0"
 
     def __init__(self, api_key: str = "", resource_id: str = DEFAULT_RESOURCE_ID,
-                 boosting_table_id: str = "", correct_words: dict = None):
+                 boosting_table_id: str = "", hotwords: list = None):
         self._api_key = api_key
         self._resource_id = resource_id or DEFAULT_RESOURCE_ID
         self._boosting_table_id = boosting_table_id  # 控制台热词表 ID（识别偏置）
-        self._correct_words = correct_words or {}     # 内联错词→正词映射
+        self._hotwords = hotwords or []               # 词库正词，直传热词
         self._running = False
         self._audio_queue = None
         self._text_callback = None
@@ -198,7 +196,7 @@ class VolcengineEngine(BaseEngine):
 
                 config = _build_request_config(
                     boosting_table_id=self._boosting_table_id,
-                    correct_words=self._correct_words,
+                    hotwords=self._hotwords,
                 )
                 payload = json.dumps(config).encode()
                 await ws.send(_build_frame(HDR_CONFIG, payload))

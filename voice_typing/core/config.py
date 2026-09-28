@@ -59,18 +59,8 @@ def save_config(config):
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 
-def build_correct_words(config):
-    """从词库构建火山 ASR 内联错词映射 {别名: 正词}（仅对填了别名的词条生效）"""
-    mapping = {}
-    for item in config.get("custom_vocabulary", []):
-        if not isinstance(item, dict):
-            continue
-        term = item.get("term", "")
-        alias_str = item.get("alias", "")
-        if not term or not alias_str:
-            continue
-        for alias in alias_str.split(","):
-            alias = alias.strip()
-            if alias:
-                mapping[alias] = term
-    return mapping
+def build_hotwords(config):
+    """词库里的全部正词，作为火山 ASR 直传热词（不论是否填了别名）"""
+    terms = (item.get("term", "").strip()
+             for item in config.get("custom_vocabulary", []) if isinstance(item, dict))
+    return list(dict.fromkeys(t for t in terms if t))

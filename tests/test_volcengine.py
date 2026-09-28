@@ -44,7 +44,7 @@ class VolcengineEngineProtocolTests(unittest.TestCase):
     def test_request_uses_two_pass_recognition_and_inline_hotwords(self):
         config = _build_request_config(
             boosting_table_id="table-id",
-            correct_words={"麦德360": "Mid360", "埋360": "Mid360"},
+            hotwords=["Mid360", "Rviz"],
         )
         self.assertEqual(config["audio"]["language"], "zh-CN")
         self.assertTrue(config["request"]["enable_nonstream"])
@@ -53,8 +53,18 @@ class VolcengineEngineProtocolTests(unittest.TestCase):
         self.assertEqual(corpus["boosting_table_id"], "table-id")
         self.assertEqual(
             json.loads(corpus["context"]),
-            {"hotwords": [{"word": "Mid360"}]},
+            {"hotwords": [{"word": "Mid360"}, {"word": "Rviz"}]},
         )
+
+    def test_hotwords_include_terms_without_alias(self):
+        from voice_typing.core.config import build_hotwords
+        config = {"custom_vocabulary": [
+            {"term": "Rviz", "alias": ""},
+            {"term": "Claude Code", "alias": "cloud code"},
+            {"term": "Rviz", "alias": ""},
+            {"term": " ", "alias": "x"},
+        ]}
+        self.assertEqual(build_hotwords(config), ["Rviz", "Claude Code"])
 
     def test_response_parser_handles_sequence_and_definite_result(self):
         frame = _server_frame({

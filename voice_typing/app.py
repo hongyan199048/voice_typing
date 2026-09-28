@@ -2,6 +2,7 @@
 """VoiceType — 实时语音转文字桌面应用"""
 
 import os
+import re
 import sys
 import subprocess
 import threading
@@ -10,7 +11,7 @@ from functools import partial
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 
-from voice_typing.core.config import load_config, build_correct_words
+from voice_typing.core.config import load_config, build_hotwords
 from voice_typing.core.hotkey import HotkeyManager
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
@@ -107,7 +108,7 @@ class VoiceTypingApp(QObject):
                     "volc_asr_resource_id", "volc.seedasr.sauc.duration"
                 ),
                 boosting_table_id=self._config.get("volc_boosting_table_id", ""),
-                correct_words=build_correct_words(self._config),
+                hotwords=build_hotwords(self._config),
             )
         else:
             self._engine = AlibabaEngine(
@@ -368,8 +369,9 @@ class VoiceTypingApp(QObject):
                 continue
             for alias in alias_str.split(","):
                 alias = alias.strip()
-                if alias and alias in text:
-                    text = text.replace(alias, term)
+                if alias:
+                    text = re.sub(re.escape(alias), lambda _: term, text,
+                                  flags=re.IGNORECASE)
         return text
 
     def _update_stats(self, text):
