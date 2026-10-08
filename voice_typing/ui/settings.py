@@ -988,7 +988,7 @@ class SettingsWindow(QWidget):
         self._realtime_polish_check = QCheckBox("录音过程中提前润色")
         self._realtime_polish_row = self._field(
             "提前润色", self._realtime_polish_check,
-            "边说边润色，松开快捷键后出字更快，代价是可能多消耗 token。",
+            "边说边润色，结束录音后出字更快，代价是可能多消耗 token。",
         )
         polish_llm_layout.addWidget(self._divider())
         polish_llm_layout.addWidget(self._realtime_polish_row)
@@ -1040,9 +1040,13 @@ class SettingsWindow(QWidget):
         # ③ 快捷键
         hotkey_card = QGroupBox("快捷键")
         hlayout = QVBoxLayout(hotkey_card)
-        hk_hint = QLabel("按住说话，松开结束。支持组合键，也支持单键长按。")
+        hk_hint = QLabel("支持组合键，也支持单键。")
         hk_hint.setObjectName("field-hint")
         hlayout.addWidget(hk_hint)
+        self._hotkey_mode_combo = _DarkComboBox()
+        self._hotkey_mode_combo.addItem("按住说话，松开结束", "hold")
+        self._hotkey_mode_combo.addItem("按一下开始，再按一下结束", "toggle")
+        hlayout.addWidget(self._field("触发方式", self._hotkey_mode_combo))
         hrow = QHBoxLayout()
         self._hotkey_btn = QPushButton(self._hotkey_display())
         self._hotkey_btn.setMinimumHeight(44)
@@ -1244,6 +1248,10 @@ class SettingsWindow(QWidget):
         if ov_idx >= 0:
             self._overlay_style_combo.setCurrentIndex(ov_idx)
 
+        mode_idx = self._hotkey_mode_combo.findData(self._config.get("hotkey_mode", "hold"))
+        if mode_idx >= 0:
+            self._hotkey_mode_combo.setCurrentIndex(mode_idx)
+
         self._refresh_credential_visibility()
 
         self._autostart_check.setChecked(self._config.get("autostart", False))
@@ -1313,6 +1321,11 @@ class SettingsWindow(QWidget):
         if self._new_hotkey_keys is not None:
             self._config["hotkey"] = self._new_hotkey_keys
             self._new_hotkey_keys = None
+
+        hotkey_mode = self._hotkey_mode_combo.currentData()
+        if hotkey_mode != self._config.get("hotkey_mode", "hold"):
+            self._config["hotkey_mode"] = hotkey_mode
+            self._hotkey.set_mode(hotkey_mode)
 
         # 自定义词库（从词典页同步）
         vocab = []

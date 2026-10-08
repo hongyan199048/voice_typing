@@ -60,6 +60,10 @@ class HotkeyManager:
     - 组合键（多键）：全部按下立即触发录音
     - 单键长按（一键）：按住超过 1 秒触发录音，松手结束
 
+    触发方式（mode）：
+    - "hold"：按住说话，松开结束（默认）
+    - "toggle"：按一下开始，再按一下结束（组合键/单键均适用）
+
     关键设计：
     - pause/resume 不停止 pynput listener（避免 X11 grab 释放导致窗口焦点丢失），
       仅设置 _paused 标志屏蔽热键触发
@@ -85,6 +89,7 @@ class HotkeyManager:
         self._long_press_timer = None
         self._paused = False
         self._stale_timer_running = False
+        self._mode = "hold"
 
         if hotkey_list:
             self.set_hotkey(hotkey_list)
@@ -96,6 +101,16 @@ class HotkeyManager:
         self._hotkey_set = keys
         self._is_long_press = len(hotkey_list) == 1
         self._clear_state()
+
+    def set_mode(self, mode):
+        """切换触发方式："hold" 按住说话 / "toggle" 按一下开始再按一下结束"""
+        with self._lock:
+            was_recording = self._recording
+            self._mode = mode if mode in ("hold", "toggle") else "hold"
+            self._clear_state()
+            # 切换时正在录音，结束掉，避免状态与 app 不一致
+            if was_recording and self._on_stop:
+                self._on_stop()
 
     def set_callbacks(self, on_start, on_stop, on_key_detected=None):
         self._on_start = on_start
@@ -198,8 +213,8 @@ class HotkeyManager:
     def _purge_stale_keys(self):
         now = time.time()
         with self._lock:
-            # 录音中不检测卡键：长按模式下用户会一直按住触发键，属于正常行为
-            if self._recording:
+            # 按住模式录音中不检测卡键：用户会一直按住触发键，属于正常行为
+            if self._recording and self._mode == "hold":
                 return
             stale = [
                 k for k, t in self._press_times.items()
@@ -209,7 +224,9 @@ class HotkeyManager:
                 for k in stale:
                     self._keys.discard(k)
                     self._press_times.pop(k, None)
-                if self._is_long_press:
+                if self._mode == "toggle":
+                    pass  # 切换模式下松键不影响录音，只清理残留按键
+                elif self._is_long_press:
                     self._on_long_press_release()
                 else:
                     self._check_combo_stop()
@@ -256,6 +273,19 @@ class HotkeyManager:
                 if self._on_stop:
                     self._on_stop()
 
+    # ---- 切换模式 ----
+
+    def _toggle_recording(self):
+        """快捷键完整按下的瞬间调用：未录音则开始，录音中则结束"""
+        if self._recording:
+            self._recording = False
+            if self._on_stop:
+                self._on_stop()
+        else:
+            self._recording = True
+            if self._on_start:
+                self._on_start()
+
     # ---- 事件分发 ----
 
     def _on_press(self, key):
@@ -269,7 +299,11 @@ class HotkeyManager:
             if not self._hotkey_set or self._paused:
                 return
 
-            if self._is_long_press:
+            if self._mode == "toggle":
+                # 只在本次按下让快捷键「刚好凑齐」时触发一次（自动重复已在上方过滤）
+                if k in self._hotkey_set and self._hotkey_set.issubset(self._keys):
+                    self._toggle_recording()
+            elif self._is_long_press:
                 if k in self._hotkey_set and self._press_time is None:
                     self._press_time = time.time()
                     # 按键检测到，立刻通知（用于延迟诊断）
@@ -291,7 +325,7 @@ class HotkeyManager:
             self._keys.discard(k)
             self._press_times.pop(k, None)
 
-            if not self._hotkey_set or self._paused:
+            if not self._hotkey_set or self._paused or self._mode == "toggle":
                 return
 
             if self._is_long_press:

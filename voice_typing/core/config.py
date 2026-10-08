@@ -13,6 +13,7 @@ DEFAULT_CONFIG = {
     "volc_asr_resource_id": "volc.seedasr.sauc.duration",  # 豆包流式语音识别 2.0 小时版
     "overlay_style": "aurora",      # 浮窗外观：glass / minimal / neon / aurora（晕染）
     "hotkey": [],                      # 无默认快捷键，首次运行由用户在「设置」中录制
+    "hotkey_mode": "hold",          # 触发方式：hold 按住说话 / toggle 按一下开始、再按一下结束
     "first_run": True,
     "custom_vocabulary": [],        # 自定义热词列表：["CUDA", "GitHub", "Python"]
     "phrase_id": "",                # 阿里云热词表ID（UUID，由VocabularyService创建）
