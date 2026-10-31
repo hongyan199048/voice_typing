@@ -1125,6 +1125,16 @@ class SettingsWindow(QWidget):
         polish_llm_layout.addWidget(self._realtime_divider)
         polish_llm_layout.addWidget(self._realtime_polish_row)
 
+        self._smart_polish_check = QCheckBox("按当前使用的软件调整格式")
+        self._smart_polish_row = self._field(
+            "智能润色", self._smart_polish_check,
+            "聊天软件里保持口语短句；写邮件分段、礼貌；写文档整理成要点列表；"
+            "写代码和问 AI 时英文术语保持原样。认不出的软件照常润色。",
+        )
+        self._smart_divider = self._divider()
+        polish_llm_layout.addWidget(self._smart_divider)
+        polish_llm_layout.addWidget(self._smart_polish_row)
+
         self._polish_provider_combo.currentIndexChanged.connect(self._on_polish_provider_preview)
 
         # 润色强度
@@ -1390,6 +1400,7 @@ class SettingsWindow(QWidget):
         for name, field in self._polish_key_inputs.items():
             field.setText(self._config.get(f"{name}_api_key", ""))
         self._realtime_polish_check.setChecked(self._config.get("realtime_polish", False))
+        self._smart_polish_check.setChecked(self._config.get("smart_polish", True))
 
         self._refresh_dict_list()
 
@@ -1413,6 +1424,8 @@ class SettingsWindow(QWidget):
         self._polish_key_divider.setVisible(provider != "off")
         self._realtime_polish_row.setVisible(provider != "off")
         self._realtime_divider.setVisible(provider != "off")
+        self._smart_polish_row.setVisible(provider != "off")
+        self._smart_divider.setVisible(provider != "off")
 
     # ---------- 头像颜色 ----------
 
@@ -1486,6 +1499,7 @@ class SettingsWindow(QWidget):
             self._config["polish_provider"] != "off"
             and self._realtime_polish_check.isChecked()
         )
+        self._config["smart_polish"] = self._smart_polish_check.isChecked()
 
         if self._new_hotkey_keys is not None:
             self._config["hotkey"] = self._new_hotkey_keys

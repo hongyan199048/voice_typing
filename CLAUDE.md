@@ -30,7 +30,7 @@ voice-typing-app/
 │   ├── __main__.py           # 入口：python -m voice_typing
 │   ├── app.py                # VoiceTypingApp 主应用 + 润色路由
 │   ├── recorder.py           # Recorder 录音控制器
-│   ├── core/                 # config.py / hotkey.py / updater.py / vocabulary.py / emotion.py
+│   ├── core/                 # config.py / hotkey.py / updater.py / vocabulary.py / emotion.py / scene.py
 │   ├── engine/               # base.py / alibaba.py / volcengine.py
 │   └── ui/                   # styles.py / settings.py / overlay.py / avatar.py / resources/
 ├── packaging/                 # 打包配置（deb / rpm / AppImage 共用）
@@ -45,6 +45,7 @@ voice-typing-app/
 │   └── appimage/             # Dockerfile + build-inner.sh
 ├── scripts/
 │   ├── build-packages.sh     # 一键产出三种包 → dist/
+│   ├── make_readme_images.py # README 截图 + 浮窗动图 → docs/images/（演示配置，界面改版后重跑）
 │   ├── start.sh
 │   └── monitor_latency.sh
 ├── tests/
@@ -53,6 +54,9 @@ voice-typing-app/
 │   ├── test_error_surface.py    # 失败不静默（错误提示到浮窗）
 │   ├── test_overlay_states.py   # 浮窗状态切换
 │   ├── test_emotion.py          # 转写文本 → 头像表情
+│   ├── test_avatar_idle.py      # 头像待机小动作、打盹与唤醒
+│   ├── test_scene.py            # 智能润色：窗口 → 场景
+│   ├── test_waveform.py         # 音波自适应归一化
 │   ├── test_cancel.py           # 浮窗 ✕ 取消：停录、丢弃迟到结果
 │   ├── test_dict_io.py          # 词典 CSV 导入导出
 │   └── test_updater.py          # 版本号解析与新版本判断
@@ -98,6 +102,7 @@ voice-typing-app/
 - `_LLM_PROVIDERS`：润色厂商表（base_url, model, key 字段），新增厂商只加一行
 - 润色路由 `_resolve_polish_provider()`：显式 `polish_provider` 优先 → 否则按已填 Key 推断 → 都没有则 `off`；与 ASR 引擎解耦
 - 少于 15 字（`_POLISH_BYPASS_CHARS`）跳过润色；失败 / 取消回退原文，不跨厂商重试
+- 智能润色（`smart_polish`，默认开）：润色线程里读当前窗口 WM_CLASS + 标题（`_active_window`），`core/scene.py` 判成聊天 / 邮件 / 文档 / 代码 / 终端，往提示词末尾追加该场景的格式要求；浏览器按标题认网站，认不出走「其他」不追加；标题不发给大模型
 - 实时润色（`realtime_polish`，默认关）：停顿 1s debounce 提前润色；仅当源文本与最终文本一致时才用缓存
 - `_apply_alias_map()`：词库别名替换（忽略大小写）
 - `_update_stats()`：累计时长 / 字数 / 次数 + 历史记录
@@ -115,7 +120,7 @@ voice-typing-app/
 
 **config.py**：
 - 配置文件路径：`~/.config/voice_typing/config.json`
-- 配置项：engine（alibaba/volcengine）、alibaba_api_key、volc_asr_api_key / volc_asr_resource_id / volc_boosting_table_id、polish_provider（off/deepseek/glm/minimax）+ 各厂商 Key、polish_strength、realtime_polish、avatar_color、overlay_chat、hotkey、custom_vocabulary、stats、history
+- 配置项：engine（alibaba/volcengine）、alibaba_api_key、volc_asr_api_key / volc_asr_resource_id / volc_boosting_table_id、polish_provider（off/deepseek/glm/minimax）+ 各厂商 Key、polish_strength、realtime_polish、smart_polish、avatar_color、overlay_chat、hotkey、custom_vocabulary、stats、history
 - 加载时补齐缺失默认值；旧版润色厂商（千问 / 豆包方舟）置空重新推断，`doubao_*` 字段仅保留兼容
 
 **updater.py**：
@@ -168,7 +173,9 @@ is_available() -> bool     # 检查引擎是否就绪
 - 左侧头像（圆头直径 56，与右侧按钮同大）：`ui/avatar.py` 的 `AvatarWidget`，QPainter 原生绘制；状态（待机 / 聆听 / 思考 / 失败）+ 9 种表情逐点变形、眨眼、呼吸、张望
   - 眼睛轮廓由 `scripts/extract_avatar_eyes.py` 从 `docs/ui/round-avatar.html` 引擎提取（开发期需 playwright，运行时不需要）
 - 单击头像（移动不到拖拽阈值）= 开始 / 结束语音输入：`avatar_clicked` → `HotkeyManager.toggle()`，与快捷键共用录音状态，两种触发方式下都是点一下开始、再点一下结束
-- 表情由 `core/emotion.py` 关键词判断：取转写文本里最后出现的情绪词
+- 表情：说话中用 `core/emotion.py` 关键词即时判断（取最后出现的情绪词）；定稿后若开了润色，`app._run_emotion` 与润色并行让同一个大模型判情绪（`_EMOTION_PROMPT`，max_tokens 5，约 1s），经 `overlay.set_emotion` 盖过关键词结果，失败退回关键词；出结果后摆表情停留 `EMOTION_HOLD_S`（4s）再回正（说话时人在看别的窗口，出结果才是看头像的时候）
+- 头像帧率分三档：快动作 60fps / 眼睛转向 30fps / 只剩呼吸 10fps（呼吸胀缩不到 1 像素，降帧看不出），待机平均约 15fps
+- 待机小动作（`avatar.py`）：每 5–12s 随机换表情 / 连眨 / 蹦一下 / 歪头；待机 90s 打盹（犯困脸 + 飘 z），鼠标移上来或切状态就醒
 - 录音时显示 14 根音量历史条（`Recorder.level` 每 100ms 推一次）
 - 右侧两个圆按钮：聊天开关（选中加深，存配置 `overlay_chat`）+ 红色 ✕（`cancel_requested` → `app._on_cancel`：停录、丢弃识别 / 润色结果、不粘贴；`HotkeyManager.cancel()` 清录音标记，松键 / 下次按键不再当作结束）
 - 聊天关：出字后文字替换波形，主胶囊最宽 640px（超长只显示尾部）

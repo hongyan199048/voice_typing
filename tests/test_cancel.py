@@ -35,6 +35,7 @@ class _Stub:
     _resolve_polish_provider = lambda self: "deepseek"
     _apply_alias_map = lambda self, t: t
     _build_vocabulary_hint = lambda self: ""
+    _scene_hint = lambda self: ""
     _POLISH = VoiceTypingApp._POLISH
     _POLISH_BYPASS_CHARS = VoiceTypingApp._POLISH_BYPASS_CHARS
 

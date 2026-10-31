@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QApplication
 
 from voice_typing.core.config import load_config, build_hotwords
 from voice_typing.core.hotkey import HotkeyManager
+from voice_typing.core.scene import detect_scene, scene_hint
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
 from voice_typing.ui.styles import APP_STYLE, OVERLAY_STYLE
@@ -51,6 +52,7 @@ class VoiceTypingApp(QObject):
     recording_stop_signal = pyqtSignal()
     key_detected_signal = pyqtSignal()
     polish_done = pyqtSignal(str)
+    emotion_detected = pyqtSignal(int, str)  # (会话编号, 表情名)：大模型判出的情绪
     polish_progress = pyqtSignal(str)
 
     def __init__(self):
@@ -64,6 +66,7 @@ class VoiceTypingApp(QObject):
         self.recording_start_signal.connect(self._on_recording_start_main_thread)
         self.recording_stop_signal.connect(self._on_recording_stop_main_thread)
         self.polish_done.connect(self._on_polish_done)
+        self.emotion_detected.connect(self._on_emotion_detected)
         self.polish_progress.connect(self._on_polish_progress)
 
         self._hotkey = HotkeyManager(self._config.get("hotkey", []))
@@ -217,6 +220,9 @@ class VoiceTypingApp(QObject):
         else:
             self._recording_duration = 0
 
+        if text and self._resolve_polish_provider() != "off":
+            threading.Thread(target=self._run_emotion, args=(text, self._session), daemon=True).start()
+
         # 还要走润色时保持「处理中」，由 _on_polish_done 粘贴后再回待机
         if not text or not self._cached_polish_is_stale(text):
             self._overlay.stop_recording()
@@ -313,6 +319,7 @@ class VoiceTypingApp(QObject):
         strength = self._config.get("polish_strength", "medium")
         prompt = self._POLISH.get(strength, self._POLISH["medium"])
         prompt += self._build_vocabulary_hint()
+        prompt += self._scene_hint()
 
         polished = self._call_llm(prompt, raw_text, self._polish_cancel_event)
         if polished is None:
@@ -335,9 +342,8 @@ class VoiceTypingApp(QObject):
                 return name
         return "off"
 
-    def _call_llm(self, system_prompt, user_text, cancel_event=None):
-        """流式调用所选润色模型，边收 token 边推送浮窗。
-        未配置 / 失败 / 被取消都返回 None，由调用方回退原始文本（不跨厂商重试）。"""
+    def _llm_client(self):
+        """所选润色厂商的 (厂商名, OpenAI 客户端, 模型)；未选 / 没填 Key 返回 None"""
         provider = self._resolve_polish_provider()
         entry = _LLM_PROVIDERS.get(provider)
         if entry is None:
@@ -347,9 +353,18 @@ class VoiceTypingApp(QObject):
         if not api_key:
             print(f"[Polish] {provider} 未配置 API Key，回退原文")
             return None
+        from openai import OpenAI
+        return provider, OpenAI(api_key=api_key, base_url=base_url), model
+
+    def _call_llm(self, system_prompt, user_text, cancel_event=None):
+        """流式调用所选润色模型，边收 token 边推送浮窗。
+        未配置 / 失败 / 被取消都返回 None，由调用方回退原始文本（不跨厂商重试）。"""
+        provider = self._resolve_polish_provider()
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key, base_url=base_url)
+            target = self._llm_client()
+            if target is None:
+                return None
+            provider, client, model = target
             stream = client.chat.completions.create(
                 model=model,
                 messages=_build_polish_messages(system_prompt, user_text),
@@ -375,6 +390,48 @@ class VoiceTypingApp(QObject):
             print(f"[Polish] {provider} 异常: {type(e).__name__}: {e}")
             return None
 
+    _EMOTION_PROMPT = (
+        "你是情绪标注工具。<口述内容> 标签里是一段语音转写，判断说话人此刻的情绪，"
+        "只回答下面一个英文单词，不要任何其他文字：\n"
+        "happy（开心、满意、兴奋）/ sad（难过、失落、遇到坏事、委屈）/ surprised（惊讶、意外）/ "
+        "confused（疑惑、不解、提问求助）/ squinted（生气、烦躁、不满）/ sleepy（疲惫、困）/ "
+        "calm（平静、放心）/ neutral（陈述事实、没有明显情绪）"
+    )
+    _EMOTIONS = ("happy", "sad", "surprised", "confused", "squinted", "sleepy", "calm", "neutral")
+
+    def _classify_emotion(self, text):
+        """让润色用的大模型顺手判一下情绪；失败、超时或答非所问返回 None（浮窗退回关键词）"""
+        try:
+            target = self._llm_client()
+            if target is None:
+                return None
+            provider, client, model = target
+            reply = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": self._EMOTION_PROMPT},
+                          {"role": "user", "content": f"<口述内容>\n{text}\n</口述内容>"}],
+                temperature=0,
+                max_tokens=5,
+                timeout=10,
+            ).choices[0].message.content or ""
+        except Exception as e:
+            print(f"[Emotion] 异常: {type(e).__name__}: {e}")
+            return None
+        word = reply.strip().lower()
+        return next((e for e in self._EMOTIONS if word.startswith(e)), None)
+
+    def _run_emotion(self, text, session):
+        """后台线程：与润色并行，不拖慢出字"""
+        emotion = self._classify_emotion(text)
+        print(f"[Emotion] {emotion}")
+        if emotion:
+            self.emotion_detected.emit(session, emotion)
+
+    @pyqtSlot(int, str)
+    def _on_emotion_detected(self, session, emotion):
+        if session == self._session:  # 已经开始下一段 / 点了 ✕ 就不换了
+            self._overlay.set_emotion(emotion)
+
     # 短于该字数的语音结果跳过 LLM 润色，直接粘贴（追求短句低延迟）
     _POLISH_BYPASS_CHARS = 15
 
@@ -390,6 +447,7 @@ class VoiceTypingApp(QObject):
         strength = self._config.get("polish_strength", "medium")
         prompt = self._POLISH.get(strength, self._POLISH["medium"])
         prompt += self._build_vocabulary_hint()
+        prompt += self._scene_hint()
 
         polished = self._call_llm(prompt, raw_text)
         if session != self._session:
@@ -565,6 +623,14 @@ class VoiceTypingApp(QObject):
             f"请根据上下文将发音相似的词修正为这些正确词汇：{term_list}。"
         )
 
+    def _scene_hint(self):
+        """智能润色：按当前窗口追加格式要求；开关关闭时为空。在润色线程里调，不卡主线程"""
+        if not self._config.get("smart_polish", True):
+            return ""
+        scene = detect_scene(*self._active_window())
+        print(f"[Polish] 智能润色场景: {scene}")
+        return scene_hint(scene)
+
     _TERMINAL_CLASSES = [
         "gnome-terminal", "kitty", "alacritty", "xfce4-terminal",
         "tilix", "konsole", "terminator", "xterm", "urxvt", "rxvt",
@@ -572,25 +638,24 @@ class VoiceTypingApp(QObject):
         "io.elementary.terminal", "wezterm", "st-", "tilda", "guake",
     ]
 
+    @staticmethod
+    def _active_window():
+        """当前活动窗口的 (WM_CLASS, 标题)；拿不到（Wayland、超时）返回两个空串"""
+        def run(*cmd):
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=1).stdout.strip()
+        try:
+            wid = run("xdotool", "getactivewindow")
+            if not wid:
+                return "", ""
+            # WM_CLASS 输出格式: WM_CLASS(STRING) = "gnome-terminal-server", "Gnome-terminal"
+            return run("xprop", "-id", wid, "WM_CLASS"), run("xdotool", "getwindowname", wid)
+        except Exception:
+            return "", ""
+
     @classmethod
     def _is_terminal_window(cls):
-        try:
-            wid = subprocess.run(
-                ["xdotool", "getactivewindow"],
-                capture_output=True, text=True, timeout=1,
-            ).stdout.strip()
-            if not wid:
-                return False
-            result = subprocess.run(
-                ["xprop", "-id", wid, "WM_CLASS"],
-                capture_output=True, text=True, timeout=1,
-            )
-            # WM_CLASS 输出格式: WM_CLASS(STRING) = "gnome-terminal-server", "Gnome-terminal"
-            wm_class = result.stdout.strip().lower()
-            is_terminal = any(t in wm_class for t in cls._TERMINAL_CLASSES)
-            return is_terminal
-        except Exception:
-            return False
+        wm_class = cls._active_window()[0].lower()
+        return any(t in wm_class for t in cls._TERMINAL_CLASSES)
 
     def _type_text(self, text):
         import time

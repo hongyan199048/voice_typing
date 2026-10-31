@@ -253,6 +253,7 @@ class OverlayWindow(QWidget):
         self._text = ""              # 当前要显示的文字
         self._error = False          # 文字是不是错误提示
         self._polish_active = False  # 实时润色进行中时，忽略 ASR 原始文字
+        self._emotion = None         # 大模型判出的本次情绪（没开润色 / 还没回来时为 None）
 
         self._waveform = WaveformWidget()
         self._bubble = TextBubble()
@@ -479,6 +480,7 @@ class OverlayWindow(QWidget):
     def start_recording(self):
         """开始录音：头像聆听 + 胶囊展开；80ms 后再出波形，与展开动画同步"""
         self._avatar.set_state("listening")
+        self._emotion = None
         self._active = True
         self._listening = True
         self._text = ""
@@ -492,9 +494,22 @@ class OverlayWindow(QWidget):
         self._listening = False
         self._render()
 
+    # 出结果后表情停留的秒数：说话时人在看别的窗口，结果出来这几秒才是看头像的时候
+    EMOTION_HOLD_S = 4.0
+
     def stop_recording(self):
-        """录音与处理都结束：头像回待机"""
+        """录音与处理都结束：头像回待机，但先按最终文字摆出表情停一会。
+        大模型已判出情绪就用它，否则用关键词"""
         self._avatar.set_state("idle")
+        if self._text and not self._error:
+            self._avatar.set_expression(self._emotion or detect_emotion(self._text),
+                                        hold=self.EMOTION_HOLD_S)
+
+    def set_emotion(self, name: str):
+        """大模型判出的情绪：还在思考就先记下（出结果时用），已出结果就立即换上"""
+        self._emotion = name
+        if self._avatar.state == "idle":
+            self._avatar.set_expression(name, hold=self.EMOTION_HOLD_S)
         self._listening = False
         self._render()
 

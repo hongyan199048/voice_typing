@@ -2,7 +2,8 @@
 
 眼睛轮廓来自 resources/avatar-eyes.json（scripts/extract_avatar_eyes.py 从 round-avatar
 引擎提取的 9 种表情正脸形状）。动作是这里重新做的简化版：表情逐点变形、眨眼、呼吸、
-待机四处张望、录音时随音量轻弹、思考时三点跳动。
+待机四处张望、录音时随音量轻弹、思考时三点跳动。待机还会隔一阵做个小动作（换表情、
+连眨两下、蹦一下、歪头），太久没动静就犯困打盹，鼠标移上来或开始录音就醒。
 """
 
 import json
@@ -24,11 +25,18 @@ BLINK_BLOCKING = set(_DATA["blinkBlocking"])  # 这些表情眼型特殊，眨�
 _STATE_FACE = {"idle": "neutral", "listening": "neutral", "thinking": "neutral", "failed": "sad"}
 _STATE_GAZE = {"listening": (6.0, 8.0), "failed": (0.0, -10.0)}
 
-FRAME_MS = 16       # 有快动作时 60fps
-IDLE_FRAME_MS = 33  # 待机只剩呼吸和缓慢张望时 30fps：半透明窗口每帧合成有固定开销，省一半 CPU
+FRAME_MS = 16       # 有快动作（眨眼、变表情、蹦、歪头）时 60fps
+GAZE_FRAME_MS = 33  # 眼睛慢慢转向时 30fps
+IDLE_FRAME_MS = 100 # 只剩呼吸时 10fps：胀缩不到 1 像素，帧率再高也看不出，省 CPU
 MORPH_S = 0.28                        # 表情变形时长（与原引擎 durations.morph 一致）
 BLINK_CLOSE_S, BLINK_HOLD_S, BLINK_OPEN_S = 0.071, 0.033, 0.156  # 合计 0.26s，同原引擎
 DOTS_FADE_S = 0.25                    # 头 ⇄ 思考三点的过渡
+
+IDLE_ACT_S = (5.0, 12.0)   # 待机小动作的间隔（秒，随机）
+SLEEP_AFTER_S = 90.0       # 待机这么久没动静就打盹
+IDLE_FACES = ("happy", "calm", "inspecting", "surprised")
+HOP_S, TILT_S = 0.45, 1.6  # 蹦一下 / 歪头的时长
+TILT_DEG = 12.0
 
 
 def _ease(t: float) -> float:
@@ -70,6 +78,14 @@ class AvatarWidget(QWidget):
         self._level = self._bounce = 0.0          # 录音音量 → 头部轻弹
         self._dots = 0.0                          # 0 = 头，1 = 思考三点
 
+        # 待机小动作：下次动作时刻、表情回正时刻、连眨、蹦跳 / 歪头起始时刻、是否打盹
+        self._idle_since = 0.0
+        self._act_at = random.uniform(*IDLE_ACT_S)
+        self._face_back_at = None
+        self._double_blink = False
+        self._hop_t0 = self._tilt_t0 = -10.0
+        self._asleep = False
+
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.update)
 
@@ -83,18 +99,28 @@ class AvatarWidget(QWidget):
     # ---- 对外接口 ----
 
     def set_state(self, state: str):
-        """idle / listening / thinking / failed；切状态回到该状态的默认表情"""
+        """idle / listening / thinking / failed；切状态回到该状态的默认表情（同状态重复设不动）"""
+        if state == self._state:
+            return
         self._state = state
         self._wander_at = 0.0
+        self._wake(self._clock.elapsed() / 1000)
         self.set_expression(_STATE_FACE.get(state, "neutral"))
 
-    def set_expression(self, name: str):
+    def set_expression(self, name: str, hold: float = None):
+        """hold：待机时停留这么多秒后自动回正"""
+        if hold is not None:
+            self._face_back_at = self._clock.elapsed() / 1000 + hold
         if name not in EYES or name == self._expr:
             return
         self._from = self._current_eyes()
         self._to = EYES[name]
         self._expr = name
         self._morph_t = 0.0
+
+    @property
+    def state(self) -> str:
+        return self._state
 
     def set_level(self, level: float):
         self._level = level
@@ -104,7 +130,50 @@ class AvatarWidget(QWidget):
         self._color = QColor(color)
         self.update()
 
+    def enterEvent(self, event):
+        """鼠标移上来：打盹就惊醒一下"""
+        if self._asleep:
+            now = self._clock.elapsed() / 1000
+            self._wake(now)
+            self.set_expression("surprised")
+            self._face_back_at = now + 0.8
+
     # ---- 动画 ----
+
+    def _wake(self, now: float):
+        self._asleep = False
+        self._idle_since = now
+        self._face_back_at = None
+        self._act_at = now + random.uniform(*IDLE_ACT_S)
+
+    def _idle_tick(self, now: float):
+        """待机小动作调度；只在 idle 状态下跑"""
+        if self._face_back_at is not None and now >= self._face_back_at:
+            self._face_back_at = None
+            self.set_expression("neutral")
+        if self._asleep:
+            return
+        if now - self._idle_since > SLEEP_AFTER_S:
+            self._asleep = True
+            self._face_back_at = None
+            self.set_expression("sleepy")
+            return
+        if now < self._act_at:
+            return
+        self._act_at = now + random.uniform(*IDLE_ACT_S)
+        act = random.choice(("face", "face", "blink2", "hop", "tilt"))
+        if act == "face":
+            self.set_expression(random.choice(IDLE_FACES))
+            self._face_back_at = now + random.uniform(1.2, 2.5)
+        elif act == "blink2":
+            self._blink_at = now
+            self._double_blink = True
+        elif act == "hop":
+            self._hop_t0 = now
+        else:  # 歪头配疑惑脸
+            self._tilt_t0 = now
+            self.set_expression("confused")
+            self._face_back_at = now + TILT_S
 
     @staticmethod
     def _next_blink(now: float) -> float:
@@ -130,14 +199,19 @@ class AvatarWidget(QWidget):
             return 1.0
         if dt < BLINK_CLOSE_S + BLINK_HOLD_S + BLINK_OPEN_S:
             return 1 - _ease((dt - BLINK_CLOSE_S - BLINK_HOLD_S) / BLINK_OPEN_S)
-        self._blink_at = self._next_blink(now)
+        self._blink_at = now + 0.12 if self._double_blink else self._next_blink(now)
+        self._double_blink = False
         return 0.0
 
     def _advance(self, now: float, dt: float):
         self._morph_t = min(1.0, self._morph_t + dt / MORPH_S)
 
-        # 视线：待机时每 1.5–4s 随机换个方向看；其它状态用固定朝向
+        # 视线：待机时每 1.5–4s 随机换个方向看（打盹时低头不动）；其它状态用固定朝向
         if self._state == "idle":
+            self._idle_tick(now)
+        if self._state == "idle" and self._asleep:
+            self._gaze_target = (0.0, -6.0)
+        elif self._state == "idle":
             if now >= self._wander_at:
                 self._wander_at = now + random.uniform(1.5, 4.0)
                 self._gaze_target = (random.uniform(-14, 14), random.uniform(-8, 8)) \
@@ -175,20 +249,33 @@ class AvatarWidget(QWidget):
 
         gaze_moving = abs(math.radians(self._gaze_target[0]) - self._yaw) > 0.02 \
             or abs(math.radians(self._gaze_target[1]) - self._pitch) > 0.02
-        busy = (self._state != "idle" or self._morph_t < 1 or 0 < self._dots < 1 or gaze_moving
-                or now >= self._blink_at - FRAME_MS / 1000)
-        self._timer.setInterval(FRAME_MS if busy else IDLE_FRAME_MS)
+        acting = now - self._hop_t0 < HOP_S or now - self._tilt_t0 < TILT_S
+        # 眨眼要提前一个待机帧切到快档，否则 100ms 的间隔会把 70ms 的闭眼整个跳过
+        busy = (self._state != "idle" or self._morph_t < 1 or 0 < self._dots < 1
+                or acting or now >= self._blink_at - IDLE_FRAME_MS / 1000)
+        self._timer.setInterval(FRAME_MS if busy else GAZE_FRAME_MS if gaze_moving else IDLE_FRAME_MS)
 
     def _paint_head(self, painter: QPainter, cx: float, cy: float, now: float, weight: float):
-        breath = math.sin(now * 2 * math.pi / 3.2)
+        breath = math.sin(now * 2 * math.pi / (5.0 if self._asleep else 3.2))  # 打盹呼吸放慢
         scale = (0.6 + 0.4 * weight) * (1 + 0.06 * self._bounce)
         r = self._r * scale
         sx, sy = 1 + 0.012 * breath, 1 - 0.012 * breath  # 呼吸：轻微挤压
-        hy = cy + 0.8 * breath - 2.5 * self._bounce
+        hop = math.sin(math.pi * (now - self._hop_t0) / HOP_S) if now - self._hop_t0 < HOP_S else 0.0
+        hy = cy + 0.8 * breath - 2.5 * self._bounce - 0.12 * self._r * hop
 
         painter.setOpacity(weight)
         painter.setBrush(self._color)
         painter.drawEllipse(QPointF(cx, hy), r * sx, r * sy)
+        if self._asleep:
+            self._paint_zzz(painter, cx, hy, r, now)
+
+        # 歪头：圆头转了看不出来，只转眼睛
+        t = (now - self._tilt_t0) / TILT_S
+        if 0 <= t < 1:
+            painter.save()
+            painter.translate(cx, hy)
+            painter.rotate(TILT_DEG * math.sin(math.pi * t))
+            painter.translate(-cx, -hy)
 
         blink = self._blink_amount(now)
         path = QPainterPath()
@@ -202,7 +289,26 @@ class AvatarWidget(QWidget):
             path.closeSubpath()
         painter.setBrush(QColor("#FFFFFF"))
         painter.drawPath(path)
+        if 0 <= t < 1:
+            painter.restore()
         painter.setOpacity(1.0)
+
+    def _paint_zzz(self, painter: QPainter, cx: float, hy: float, r: float, now: float):
+        """打盹：右上角飘起的小 z，两个错开半个周期"""
+        room = self.width() / 2 - r
+        if room < 8:  # 侧栏小 Logo 没地方画
+            return
+        painter.save()
+        base = painter.opacity()
+        font = painter.font()
+        for i in range(2):
+            t = (now / 2.4 + i / 2) % 1
+            font.setPixelSize(round(room * (0.45 + 0.35 * t)))
+            painter.setFont(font)
+            painter.setPen(self._color)
+            painter.setOpacity(base * math.sin(math.pi * t))
+            painter.drawText(QPointF(cx + r * 0.55 + room * 0.5 * t, hy - r * 0.55 - room * 0.9 * t), "z")
+        painter.restore()
 
     def _paint_dots(self, painter: QPainter, cx: float, cy: float, now: float, weight: float):
         """思考：三个圆点依次上下跳、明暗起伏"""

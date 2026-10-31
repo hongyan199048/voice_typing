@@ -19,6 +19,8 @@ class _Stub:
     _apply_alias_map = VoiceTypingApp._apply_alias_map
     _run_polish = VoiceTypingApp._run_polish
     _build_vocabulary_hint = VoiceTypingApp._build_vocabulary_hint
+    _scene_hint = VoiceTypingApp._scene_hint
+    _active_window = staticmethod(lambda: ("", ""))  # 不调 xdotool；认不出场景 = 照常润色
     _POLISH = VoiceTypingApp._POLISH
     _POLISH_BYPASS_CHARS = VoiceTypingApp._POLISH_BYPASS_CHARS
     _run_realtime_polish_stream = VoiceTypingApp._run_realtime_polish_stream

@@ -21,6 +21,7 @@ DEFAULT_CONFIG = {
     "polish_strength": "medium",    # 润色强度：light / medium / strong
     "polish_provider": "",          # 润色模型：off / deepseek / glm / minimax（空=按已填 Key 推断）
     "realtime_polish": False,       # 录音过程中提前润色（默认关闭，只在最终文本后润色）
+    "smart_polish": True,           # 智能润色（默认开）：按当前窗口（聊天 / 邮件 / 文档 / 代码）调整输出格式
     "deepseek_api_key": "",         # DeepSeek API Key
     "glm_api_key": "",              # 智谱 GLM API Key
     "minimax_api_key": "",          # MiniMax API Key

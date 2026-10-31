@@ -38,6 +38,7 @@ class _Stub:
 
     _on_recording_done = VoiceTypingApp._on_recording_done
     _cached_polish_is_stale = VoiceTypingApp._cached_polish_is_stale
+    _resolve_polish_provider = lambda self: "off"  # 不起情绪判断线程
 
     def __init__(self, last_error=""):
         self._overlay = _FakeOverlay()

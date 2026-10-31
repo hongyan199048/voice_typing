@@ -26,6 +26,7 @@ class _Stub:
     _on_recording_done = VoiceTypingApp._on_recording_done
     _on_polish_done = VoiceTypingApp._on_polish_done
     _cached_polish_is_stale = VoiceTypingApp._cached_polish_is_stale
+    _resolve_polish_provider = lambda self: "off"  # 不起情绪判断线程
 
     def __init__(self):
         self._overlay = _Overlay()
@@ -80,3 +81,21 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+def test_llm_emotion_overrides_keywords():
+    """「遇到很坏的人」没有情绪关键词：大模型判 sad 后，出结果时摆 sad；先到后到都行"""
+    from voice_typing.ui.overlay import OverlayWindow
+    text = "我今天遇到了一些很坏很坏的人"
+    for early in (True, False):
+        o = OverlayWindow()
+        o.start_recording()
+        o.update_text(text)
+        o.start_processing()
+        if early:
+            o.set_emotion("sad")       # 润色还没完，情绪先回来
+        o.set_text(text)
+        o.stop_recording()
+        if not early:
+            o.set_emotion("sad")       # 出结果后才回来
+        assert o._avatar._expr == "sad"
