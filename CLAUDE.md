@@ -230,9 +230,9 @@ PyQt5 / pyaudio）由构建脚本现场派生清单，打包时 vendor 进
 ### 安装
 
 ```bash
-sudo apt install ./dist/voice-typing_1.6.3_amd64.deb  # Debian / Ubuntu（别用 dpkg -i：不会自动装依赖）
-sudo dnf install dist/voice-typing-1.6.3-1.x86_64.rpm  # Fedora / RHEL
-chmod +x dist/VoiceType-1.6.3-x86_64.AppImage && ./dist/VoiceType-*.AppImage
+sudo apt install ./dist/voice-typing_1.6.6_amd64.deb  # Debian / Ubuntu（别用 dpkg -i：不会自动装依赖）
+sudo dnf install dist/voice-typing-1.6.6-1.x86_64.rpm  # Fedora / RHEL
+chmod +x dist/VoiceType-1.6.6-x86_64.AppImage && ./dist/VoiceType-*.AppImage
 ```
 
 ### 发布 GitHub Release
@@ -295,7 +295,7 @@ gh release create v1.4.1 voice-typing_1.4.1_amd64.deb \
 
 ## 版本历史
 
-- **v1.6.6**（开发中）：界面强调色 + 托盘 / 窗口图标跟随头像颜色 + 单击浮窗头像开始 / 结束语音输入 + 首页统计数字过万显示「万」
+- **v1.6.6**（2026-10-31）：界面强调色 + 托盘 / 窗口图标跟随头像颜色 + 单击浮窗头像开始 / 结束语音输入 + 首页统计数字过万显示「万」
 - **v1.6.5**（未单独发布）：Grok 风格浮窗（原生表情头像 + 自适应音波 + 聊天气泡 + ✕ 取消）+ 设置界面重做 + 词典导入导出 + 头像颜色；去掉 QtWebEngine 依赖
 - **v1.6.4**（2026-10-08）：快捷键新增「按一下开始、再按一下结束」切换模式 + 首页 Hero 横幅 + 浮窗晕染外观 + 词典页布局调整
 - **v1.6.3**（2026-09-28）：取消默认快捷键（首次运行录制）+ 词库全部词条作火山热词 + 别名替换忽略大小写
