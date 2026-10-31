@@ -59,6 +59,10 @@ wget -O voice-typing.deb "$URL" && sudo apt install ./voice-typing.deb
 
 **智能润色** 默认开启，会按你当前使用的软件自动调整格式。比如同一段话，在飞书、微信里保持聊天的口吻，在文档里整理成一条一条的要点。不需要的话取消勾选即可。
 
+同一段话，在聊天软件里和在邮件里出来的效果（真实润色结果）：
+
+<img src="docs/images/smart-polish.png" width="860" alt="智能润色：聊天与邮件对比">
+
 <img src="docs/images/settings-polish.png" width="560" alt="润色设置">
 
 **③ 设置快捷键**

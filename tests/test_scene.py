@@ -35,6 +35,7 @@ def test_unknown_and_empty_fall_back():
     assert detect_scene('WM_CLASS(STRING) = "org.gnome.Nautilus"', "Downloads") == "other"
     assert scene_hint("other") == ""
     assert "编号列表" in scene_hint("doc") and "不要编号列表" in scene_hint("chat")
+    assert "编号列表" in scene_hint("email")  # 邮件里并列要点也要分条
 
 
 if __name__ == "__main__":

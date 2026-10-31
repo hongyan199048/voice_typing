@@ -133,18 +133,18 @@ def overlay_shots():
     o.set_avatar_color("#14C16E")
     _offscreen(o)
 
-    def grab():
-        _settle(0.05)
+    def grab(settle=0.05):
+        _settle(settle)
         return o.grab().toImage()
 
-    frames = []  # (QImage, 毫秒)
+    frames = []  # (QImage, 截取时刻)：动图每帧时长按真实间隔算，播放速度与实际一致
 
     def run(seconds, levels=False):
         end = time.time() + seconds
         while time.time() < end:
             if levels:
                 o.set_level(0.35 + 0.6 * abs(((time.time() * 2.7) % 2) - 1))
-            frames.append(grab())
+            frames.append((grab(0.015), time.time()))
 
     run(0.8)
     o.start_recording()
@@ -203,19 +203,26 @@ def overlay_shots():
 
 
 def _save_gif(frames, name):
+    import io
     from PIL import Image
     imgs = []
-    for f in frames[::2]:  # 约 10fps 就够看，体积减半
+    kept = frames[:1]
+    for f in frames[1:]:  # 抽到约 30fps：再高肉眼看不出，文件白白变大
+        if f[1] - kept[-1][1] >= 0.033:
+            kept.append(f)
+    frames = kept
+    # GIF 帧时长以 10ms 为单位；按相邻两帧的真实间隔取整
+    durations = [max(20, round((b[1] - a[1]) * 100) * 10) for a, b in zip(frames, frames[1:])] + [100]
+    for f, _ in frames:
         bg = _on_bg(f, pad=16)
         buf = QBuffer()
         buf.open(QBuffer.ReadWrite)
         bg.save(buf, "PNG")
-        import io
         imgs.append(Image.open(io.BytesIO(bytes(buf.data()))).convert("RGB")
                     .quantize(colors=96, method=Image.MEDIANCUT))
     imgs[0].save(os.path.join(OUT, name), save_all=True, append_images=imgs[1:],
-                 duration=100, loop=0, optimize=True)
-    print("saved", name, len(imgs), "frames")
+                 duration=durations, loop=0, optimize=True)
+    print("saved", name, len(imgs), "frames,", f"{1000 * len(imgs) / sum(durations):.0f} fps")
 
 
 def avatar_faces():
@@ -240,8 +247,83 @@ def avatar_faces():
     _save(sheet, "avatar-faces.png")
 
 
+SPOKEN = "嗯那个跟大家说一下明天团建的安排啊，第一个就是早上八点半在公司楼下集合，然后第二个中午呢在那个农家乐吃饭，第三个就是下午五点之前回来，大家记得穿运动鞋"
+# 下面两段是 DeepSeek + 中度润色 + 对应场景要求的真实输出（2026-10-31）
+CHAT_OUT = "跟大家说一下明天团建的安排啊。第一个就是早上八点半在公司楼下集合，第二个中午在农家乐吃饭，第三个就是下午五点之前回来，大家记得穿运动鞋。"
+EMAIL_OUT = ("跟大家说一下明天团建的安排。<br><br>1. 早上八点半在公司楼下集合。<br>2. 中午在农家乐吃饭。<br>"
+             "3. 下午五点之前回来。<br><br>大家记得穿运动鞋。")
+
+SMART_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
+* { box-sizing: border-box; margin: 0; }
+body { width: 1200px; padding: 36px; background: #F5F6F7; color: #1F1F1F;
+       font: 15px/1.6 "Noto Sans CJK SC", "Noto Sans SC", sans-serif; }
+.said { background: #fff; border: 1px solid #ECEDEF; border-radius: 20px; padding: 16px 22px;
+        display: flex; gap: 14px; align-items: center; margin-bottom: 26px; }
+.dot { width: 34px; height: 34px; border-radius: 50%; background: #14C16E; flex: none; position: relative; }
+.dot::before, .dot::after { content: ""; position: absolute; top: 11px; width: 4px; height: 11px;
+        border-radius: 2px; background: #fff; }
+.dot::before { left: 12px; } .dot::after { right: 12px; }
+.said b { color: #0E9F5A; } .said span { color: #6B6B6B; }
+.row { display: flex; gap: 28px; }
+.col { flex: 1; }
+.cap { font-weight: 700; font-size: 17px; margin: 0 0 4px 4px; }
+.cap small { font-weight: 400; color: #6B6B6B; font-size: 14px; margin-left: 8px; }
+.win { background: #fff; border-radius: 16px; border: 1px solid #E3E5E8; overflow: hidden;
+       box-shadow: 0 8px 24px rgba(0,0,0,.06); height: 400px; display: flex; flex-direction: column; margin-top: 10px; }
+.bar { height: 46px; display: flex; align-items: center; padding: 0 18px; border-bottom: 1px solid #ECEDEF;
+       font-weight: 600; gap: 8px; }
+.lights i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; }
+.chat { flex: 1; background: #F3F4F5; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg.me { flex-direction: row-reverse; }
+.av { width: 34px; height: 34px; border-radius: 8px; flex: none; }
+.bub { max-width: 400px; padding: 10px 14px; border-radius: 12px; background: #fff; }
+.me .bub { background: #B7EBCB; }
+.input { height: 64px; border-top: 1px solid #ECEDEF; padding: 12px 18px; color: #A0A0A0; }
+.field { display: flex; border-bottom: 1px solid #F0F1F3; padding: 10px 20px; gap: 12px; }
+.field span { color: #8A8A8A; width: 52px; }
+.body { padding: 16px 20px; }
+.send { margin: auto 20px 16px auto; background: #14C16E; color: #fff; border-radius: 18px; padding: 6px 22px; }
+</style></head><body>
+<div class="said"><div class="dot"></div><div><b>你说的话</b>　<span>“SPOKEN”</span></div></div>
+<div class="row">
+ <div class="col"><div class="cap">在聊天软件里<small>保持口语，一段话发出去</small></div>
+  <div class="win">
+   <div class="bar"><span class="lights"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></span>项目组（8）</div>
+   <div class="chat">
+    <div class="msg"><div class="av" style="background:#8EA6F2"></div><div class="bub">明天团建怎么安排的？</div></div>
+    <div class="msg me"><div class="av" style="background:#14C16E"></div><div class="bub">CHAT_OUT</div></div>
+   </div>
+   <div class="input">输入消息…</div>
+  </div></div>
+ <div class="col"><div class="cap">在写邮件时<small>要点自动分条，排版清楚</small></div>
+  <div class="win">
+   <div class="bar"><span class="lights"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></span>写邮件</div>
+   <div class="field"><span>收件人</span>全体同事</div>
+   <div class="field"><span>主题</span>明天团建安排</div>
+   <div class="body">EMAIL_OUT</div>
+   <div class="send">发送</div>
+  </div></div>
+</div></body></html>"""
+
+
+def smart_polish_compare():
+    """左聊天、右邮件：同一段口述在两个场景下的真实润色结果（需要 playwright）"""
+    from playwright.sync_api import sync_playwright
+    html = (SMART_HTML.replace("SPOKEN", SPOKEN).replace("CHAT_OUT", CHAT_OUT)
+            .replace("EMAIL_OUT", EMAIL_OUT))
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": 1200, "height": 600}, device_scale_factor=1.5)
+        page.set_content(html)
+        page.locator("body").screenshot(path=os.path.join(OUT, "smart-polish.png"))
+        browser.close()
+    print("saved smart-polish.png")
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     settings_shots()
     overlay_shots()
     avatar_faces()
+    smart_polish_compare()
