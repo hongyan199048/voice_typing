@@ -15,9 +15,9 @@ from voice_typing.core.config import load_config, build_hotwords
 from voice_typing.core.hotkey import HotkeyManager
 from voice_typing.engine.alibaba import AlibabaEngine
 from voice_typing.engine.volcengine import VolcengineEngine
-from voice_typing.ui.styles import DARK_STYLE, OVERLAY_STYLE
+from voice_typing.ui.styles import APP_STYLE, OVERLAY_STYLE
 from voice_typing.ui.settings import SettingsWindow
-from voice_typing.ui.overlay import OverlayWindow, DEFAULT_OVERLAY_THEME
+from voice_typing.ui.overlay import OverlayWindow
 from voice_typing.recorder import Recorder
 
 
@@ -49,6 +49,7 @@ class VoiceTypingApp(QObject):
 
     recording_start_signal = pyqtSignal()
     recording_stop_signal = pyqtSignal()
+    key_detected_signal = pyqtSignal()
     polish_done = pyqtSignal(str)
     polish_progress = pyqtSignal(str)
 
@@ -87,12 +88,18 @@ class VoiceTypingApp(QObject):
         self._cached_polished_text = ""
         self._polish_source_text = ""   # 缓存对应的原文，用来判断缓存是否已过期
         self._is_recording = False
+        self._session = 0               # 每次开始录音 / 点 ✕ 加一，旧会话的迟到结果据此丢弃
 
         self._settings = SettingsWindow(self._config, self._hotkey)
         self._settings.engine_changed.connect(self._on_engine_changed)
         self._overlay = OverlayWindow()
-        self._overlay.set_theme(self._config.get("overlay_style", DEFAULT_OVERLAY_THEME))
-        self._settings.overlay_style_changed.connect(self._overlay.set_theme)
+        self._overlay.cancel_requested.connect(self._on_cancel)
+        self._overlay.avatar_clicked.connect(self._hotkey.toggle)  # 走快捷键同一套状态，点头像和按键可混用
+        self.key_detected_signal.connect(self._overlay.flash_yellow)
+        self._overlay.set_chat(self._config.get("overlay_chat", False))
+        self._overlay.set_avatar_color(self._config.get("avatar_color", "#14C16E"))
+        self._settings.avatar_color_changed.connect(self._overlay.set_avatar_color)
+        self._overlay.chat_toggled.connect(self._on_overlay_chat_toggled)
         self._overlay.show()
 
     def _create_engine(self):
@@ -121,11 +128,18 @@ class VoiceTypingApp(QObject):
     def _on_engine_changed(self, engine):
         self._engine = engine
 
+    def _on_overlay_chat_toggled(self, on):
+        """浮窗聊天开关：记住选择，下次启动沿用"""
+        from voice_typing.core.config import save_config
+        self._config["overlay_chat"] = on
+        save_config(self._config)
+
     def _on_key_detected_flash(self):
-        """pynput 检测到 Fn 键的瞬间，立刻闪黄色（用于延迟诊断）"""
+        """pynput 检测到 Fn 键的瞬间，立刻通知浮窗（用于延迟诊断）。
+        这里跑在 pynput 线程，必须经信号转回主线程：Qt 控件只能在主线程操作"""
         import time
         print(f"[PERF] ★ Fn检测到(pynput) → {time.time():.3f}")
-        self._overlay.flash_yellow()
+        self.key_detected_signal.emit()
 
     def _on_recording_start_callback(self):
         import time
@@ -143,6 +157,7 @@ class VoiceTypingApp(QObject):
         print(f"[PERF] ② 主线程收到信号 → {t0:.3f} (距按键 {(t0 - getattr(self, '_t_keypress', t0))*1000:.0f}ms)")
         self._recording_start_time = time.time()
         self._is_recording = True
+        self._session += 1
         self._cached_polished_text = ""
         self._polish_source_text = ""
         self._polish_cancel_event.set()
@@ -159,9 +174,27 @@ class VoiceTypingApp(QObject):
         self._recorder = Recorder(self._engine, app_obj=self)
         self._recorder.text_update.connect(self._overlay.update_text)
         self._recorder.text_update.connect(self._on_asr_text_update)
+        self._recorder.level.connect(self._overlay.set_level)
         self._recorder.start()
         t2 = time.time()
         print(f"[PERF] ④ Recorder启动完成 → {t2:.3f} (距按键 {(t2 - self._t_keypress)*1000:.0f}ms)")
+
+    def _on_cancel(self):
+        """浮窗 ✕：丢弃本次语音，不粘贴。录音中则停录，识别 / 润色中的结果到了也丢掉"""
+        self._hotkey.cancel()
+        self._session += 1               # 进行中的润色线程据此丢弃结果
+        self._is_recording = False
+        self._recording_start_time = None
+        self._polish_debounce_timer.stop()
+        self._polish_cancel_event.set()
+        if self._recorder:
+            # 断开回调：被取消的录音停下后，定稿文字不再回到 app / 浮窗
+            self._recorder._app_obj = None
+            self._recorder.text_update.disconnect()
+            self._recorder.level.disconnect()
+            self._recorder.stop()
+            self._recorder = None
+        self._overlay.reset()
 
     @pyqtSlot()
     def _on_recording_stop_main_thread(self):
@@ -346,7 +379,9 @@ class VoiceTypingApp(QObject):
     _POLISH_BYPASS_CHARS = 15
 
     def _run_polish(self, raw_text):
-        """最终文本润色。润色关闭、文本过短或调用失败时，直接使用原始文本。"""
+        """最终文本润色。润色关闭、文本过短或调用失败时，直接使用原始文本。
+        期间用户点了 ✕（会话编号变了）就丢弃结果，不粘贴。"""
+        session = self._session
         if (self._resolve_polish_provider() == "off"
                 or len(raw_text) < self._POLISH_BYPASS_CHARS):
             self.polish_done.emit(self._apply_alias_map(raw_text))
@@ -357,6 +392,8 @@ class VoiceTypingApp(QObject):
         prompt += self._build_vocabulary_hint()
 
         polished = self._call_llm(prompt, raw_text)
+        if session != self._session:
+            return
         if polished is None:
             polished = raw_text
         self.polish_done.emit(self._apply_alias_map(polished))
@@ -616,7 +653,7 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setQuitOnLastWindowClosed(False)
-    app.setStyleSheet(DARK_STYLE + OVERLAY_STYLE)
+    app.setStyleSheet(APP_STYLE + OVERLAY_STYLE)
 
     import signal
     signal.signal(signal.SIGINT, lambda sig, frame: app.quit())

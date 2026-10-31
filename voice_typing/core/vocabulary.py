@@ -1,4 +1,6 @@
-"""热词表管理 — 通过 DashScope VocabularyService 创建/更新 phrase_id"""
+"""热词表管理 — 通过 DashScope VocabularyService 创建/更新 phrase_id；词典导入 / 导出"""
+
+import csv
 
 import dashscope
 from dashscope.audio.asr import VocabularyService, VocabularyServiceException
@@ -52,3 +54,43 @@ def sync_vocabulary(api_key: str, hotwords: list, phrase_id: str = None) -> str 
                 pass
         print(f"[热词] 同步失败: {e}")
         return None
+
+
+# ---- 词典文件：CSV 两列「词汇,易错词」，Excel / WPS 可直接打开编辑 ----
+
+CSV_HEADER = ("词汇", "易错词")
+
+
+def export_vocab_csv(vocab: list, path: str):
+    """vocab: [{"term", "alias"}]。utf-8-sig 带 BOM，Excel 打开中文不乱码"""
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(CSV_HEADER)
+        for item in vocab:
+            writer.writerow((item.get("term", ""), item.get("alias", "")))
+
+
+def import_vocab_csv(path: str) -> list:
+    """读 CSV 或纯文本（一行一个词汇），返回 [{"term", "alias"}]，同名词汇只留第一条。
+    先按 UTF-8 读，失败再按 GBK（中文 Windows 上 Excel 另存的 CSV）"""
+    for encoding in ("utf-8-sig", "gbk"):
+        try:
+            with open(path, encoding=encoding, newline="") as f:
+                rows = list(csv.reader(f))
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError("文件编码无法识别，请另存为 UTF-8 的 CSV")
+
+    result, seen = [], set()
+    for row in rows:
+        cells = [c.strip() for c in row]
+        if not cells or not cells[0] or tuple(cells[:2]) == CSV_HEADER:
+            continue
+        term = cells[0]
+        if term in seen:
+            continue
+        seen.add(term)
+        result.append({"term": term, "alias": cells[1] if len(cells) > 1 else ""})
+    return result

@@ -145,6 +145,18 @@ class HotkeyManager:
             self._press_times.clear()
             self._recording = False
 
+    def cancel(self):
+        """浮窗 ✕ 取消本次录音：只清「录音中」标记、不回调 on_stop。
+        按住说话松键 / 切换模式下一次按键都不会再被当作「结束」"""
+        with self._lock:
+            self._recording = False
+
+    def toggle(self):
+        """浮窗单击头像：未录音则开始、录音中则结束，与切换模式按一下快捷键等效"""
+        with self._lock:
+            if not self._paused:
+                self._toggle_recording()
+
     def resume(self):
         """恢复热键触发（粘贴后调用）"""
         with self._lock:
@@ -331,7 +343,7 @@ class HotkeyManager:
             if self._is_long_press:
                 if k in self._hotkey_set:
                     self._on_long_press_release()
-            else:
+            elif k in self._hotkey_set:  # 点头像开始的录音，敲别的键不能把它结束掉
                 self._check_combo_stop()
 
     @staticmethod

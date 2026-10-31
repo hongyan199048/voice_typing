@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- VoiceType Logo：浮窗同款绿色圆头 + 两只竖条眼睛（与 settings._draw_logo 一致） -->
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="mesh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7A035"/><stop offset="0.5" stop-color="#F26A2A"/><stop offset="1" stop-color="#E8458B"/></linearGradient></defs>
-  <rect width="256" height="256" rx="56" fill="#0d0d0d"/>
-  <circle cx="128" cy="128" r="72"
-          stroke="url(#mesh)" stroke-width="18" fill="none"
-          stroke-dasharray="390 70" stroke-dashoffset="-34"
-          stroke-linecap="round"/>
-  <circle cx="128" cy="128" r="72"
-          stroke="#0d0d0d" stroke-width="4" fill="none"
-          stroke-dasharray="390 70" stroke-dashoffset="-34"
-          stroke-linecap="round"
-          transform="rotate(178 128 128)" opacity="0.6"/>
+  <circle cx="128" cy="128" r="128" fill="#14C16E"/>
+  <rect x="88.32" y="93.44" width="28.16" height="69.12" rx="14.08" fill="#FFFFFF"/>
+  <rect x="139.52" y="93.44" width="28.16" height="69.12" rx="14.08" fill="#FFFFFF"/>
 </svg>

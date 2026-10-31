@@ -13,7 +13,7 @@ VoiceType 是一个 Ubuntu 环境下的 AI 语音转文字桌面应用，支持�
   - **阿里云 Paraformer**（云端，需 API Key）
   - **火山引擎 BigModel**（云端，需 App ID + Access Token）
 - 大模型润色（DeepSeek / 智谱 GLM / MiniMax，OpenAI 兼容接口），三档强度可调，可选录音中实时润色
-- 暗黑极简 GUI 界面（首页 / 历史 / 词典 / 设置四页）+ 实时转写浮窗（四种外观）
+- 浅色 GUI 界面（首页 / 历史 / 词典 / 设置四页，与浮窗同一套白底绿强调的胶囊风格；Logo 为绿色圆头表情）+ 实时转写浮窗（Grok 语音浮窗风格：表情头像 + 音量波形）
 - 自动粘贴到当前光标位置（xclip + xdotool XTest）
 - 自定义词库（别名替换，忽略大小写；火山引擎下全部词条作为热词直传）
 - 使用统计 + 历史记录（最近 100 条）
@@ -30,9 +30,9 @@ voice-typing-app/
 │   ├── __main__.py           # 入口：python -m voice_typing
 │   ├── app.py                # VoiceTypingApp 主应用 + 润色路由
 │   ├── recorder.py           # Recorder 录音控制器
-│   ├── core/                 # config.py / hotkey.py / updater.py / vocabulary.py
+│   ├── core/                 # config.py / hotkey.py / updater.py / vocabulary.py / emotion.py
 │   ├── engine/               # base.py / alibaba.py / volcengine.py
-│   └── ui/                   # styles.py / settings.py / overlay.py / resources/
+│   └── ui/                   # styles.py / settings.py / overlay.py / avatar.py / resources/
 ├── packaging/                 # 打包配置（deb / rpm / AppImage 共用）
 │   ├── control               # deb 控制文件
 │   ├── voice-typing.spec     # rpm spec
@@ -52,8 +52,11 @@ voice-typing-app/
 │   ├── test_volcengine.py       # 火山 ASR 协议帧解析与鉴权头
 │   ├── test_error_surface.py    # 失败不静默（错误提示到浮窗）
 │   ├── test_overlay_states.py   # 浮窗状态切换
+│   ├── test_emotion.py          # 转写文本 → 头像表情
+│   ├── test_cancel.py           # 浮窗 ✕ 取消：停录、丢弃迟到结果
+│   ├── test_dict_io.py          # 词典 CSV 导入导出
 │   └── test_updater.py          # 版本号解析与新版本判断
-├── docs/                      # ROADMAP.md / font_sizes.md / archive/
+├── docs/                      # ROADMAP.md / font_sizes.md / archive/ / ui/（Grok 浮窗录屏 + 头像演示页）
 ├── main.py                    # 兼容旧版入口
 ├── setup.py / requirements.txt / README.md / CLAUDE.md
 ├── build/                     # 构建中间物（gitignore）
@@ -67,6 +70,7 @@ voice-typing-app/
 | 组件 | 技术 | 说明 |
 |------|------|------|
 | GUI 框架 | PyQt5 | 主窗口 + 设置窗口 + 浮窗 |
+| 浮窗头像 | QPainter | 原生绘制，眼睛形状数据 `resources/avatar-eyes.json` |
 | 音频采集 | pyaudio | 16kHz 16bit mono PCM |
 | 全局快捷键 | pynput | XInput2 跨应用监听键盘事件 |
 | 云端 ASR | dashscope (阿里云) | Paraformer 实时流式识别 |
@@ -105,13 +109,13 @@ voice-typing-app/
 - 管理录音线程 + ASR 引擎生命周期
 - `start()` → 开启 pyaudio 流 + 引擎初始化
 - `stop()` → 停止录音 + 获取最终文本
-- 信号：`text_update`（实时转写）、`recording_done`（最终结果）
+- 信号：`text_update`（实时转写）、`level`（每 100ms 一次 0..1 音量，`LEVEL_FLOOR_DB` / `LEVEL_CEIL_DB` 可调）、`recording_done`（最终结果）
 
 ### 3. voice_typing/core/ — 核心功能
 
 **config.py**：
 - 配置文件路径：`~/.config/voice_typing/config.json`
-- 配置项：engine（alibaba/volcengine）、alibaba_api_key、volc_asr_api_key / volc_asr_resource_id / volc_boosting_table_id、polish_provider（off/deepseek/glm/minimax）+ 各厂商 Key、polish_strength、realtime_polish、overlay_style、hotkey、custom_vocabulary、stats、history
+- 配置项：engine（alibaba/volcengine）、alibaba_api_key、volc_asr_api_key / volc_asr_resource_id / volc_boosting_table_id、polish_provider（off/deepseek/glm/minimax）+ 各厂商 Key、polish_strength、realtime_polish、avatar_color、overlay_chat、hotkey、custom_vocabulary、stats、history
 - 加载时补齐缺失默认值；旧版润色厂商（千问 / 豆包方舟）置空重新推断，`doubao_*` 字段仅保留兼容
 
 **updater.py**：
@@ -152,15 +156,26 @@ is_available() -> bool     # 检查引擎是否就绪
 ### 5. voice_typing/ui/ — 用户界面
 
 **settings.py（SettingsWindow）**：
-- 四页导航：首页（Hero 横幅 + 统计卡片）/ 历史 / 词典（词条 + 别名）/ 设置
-- 设置页：引擎选择、API Key、快捷键录制、润色厂商与强度（轻度/中度/重度）、实时润色开关、浮窗外观
+- 样式集中在 `styles.py` 的 `APP_STYLE`（浅色、绿 #14C16E 强调、胶囊控件圆角 18 / 卡片 20）；内容区限宽 960 居中
+- Logo `_draw_logo`（绿色圆头 + 两只竖条眼睛），安装包图标 `packaging/icons/` 由它生成
+- 四页导航：首页（Hero 横幅 + 统计卡片）/ 历史 / 词典（词条 + 别名；导入 / 导出 / 全选）/ 设置
+- 词典文件：CSV 两列「词汇,易错词」（`core/vocabulary.py` 的 `export_vocab_csv` / `import_vocab_csv`），导出带 BOM 便于 Excel 打开；导入兼容纯文本一行一词、GBK 编码，已有词汇跳过
+- 设置页：引擎选择、API Key、快捷键录制、润色厂商与强度（轻度/中度/重度）、实时润色开关
 - 显示版本号 + 新版本提示
 
 **overlay.py（OverlayWindow）**：
-- 半透明无边框浮窗，位于屏幕底部，可拖拽
-- 四种外观 `OVERLAY_THEMES`：glass / minimal / neon / aurora（默认，琥珀/橙/玫红晕染缓慢流动）
-- 圆点锚定平滑动效（录音时→红，波形动画）；处理中 / 错误提示状态
-- 识别文字实时更新
+- 白色胶囊浮窗，位于屏幕底部，可拖拽；尺寸 / 圆角 / 配色按 Grok Bot 语音浮窗录屏 1:1 实测（胶囊高 86px）
+- 左侧头像（圆头直径 56，与右侧按钮同大）：`ui/avatar.py` 的 `AvatarWidget`，QPainter 原生绘制；状态（待机 / 聆听 / 思考 / 失败）+ 9 种表情逐点变形、眨眼、呼吸、张望
+  - 眼睛轮廓由 `scripts/extract_avatar_eyes.py` 从 `docs/ui/round-avatar.html` 引擎提取（开发期需 playwright，运行时不需要）
+- 单击头像（移动不到拖拽阈值）= 开始 / 结束语音输入：`avatar_clicked` → `HotkeyManager.toggle()`，与快捷键共用录音状态，两种触发方式下都是点一下开始、再点一下结束
+- 表情由 `core/emotion.py` 关键词判断：取转写文本里最后出现的情绪词
+- 录音时显示 14 根音量历史条（`Recorder.level` 每 100ms 推一次）
+- 右侧两个圆按钮：聊天开关（选中加深，存配置 `overlay_chat`）+ 红色 ✕（`cancel_requested` → `app._on_cancel`：停录、丢弃识别 / 润色结果、不粘贴；`HotkeyManager.cancel()` 清录音标记，松键 / 下次按键不再当作结束）
+- 聊天关：出字后文字替换波形，主胶囊最宽 640px（超长只显示尾部）
+- 聊天开：主胶囊始终显示波形，文字进上方 `TextBubble`（最宽 480px、多行换行、圆角 43、左对齐主胶囊）
+- 两个浮窗都带 `WindowDoesNotAcceptFocus`，点按钮不会抢走目标应用焦点
+- 待机只显示头像；窗口固定最大尺寸、只改胶囊宽度。浮窗在屏幕靠右处时胶囊贴窗口右侧、向左展开（`_place_pill` 拖动时自动切换），保证能拖到任一屏幕边缘、展开不出屏
+- 头像与音波颜色 `set_avatar_color`，来自设置页「外观」（默认绿 + 黑 / 青绿 / 蓝 / 紫 + 自定义，点选即预览，「确定」保存到 `avatar_color`）；设置界面的强调色也跟着换（`styles.set_accent` 重设全局 QSS，自绘部分取 `styles.accent()`）
 
 ---
 
@@ -215,7 +230,7 @@ PyQt5 / pyaudio）由构建脚本现场派生清单，打包时 vendor 进
 ### 安装
 
 ```bash
-sudo dpkg -i dist/voice-typing_1.6.3_amd64.deb      # Debian / Ubuntu
+sudo apt install ./dist/voice-typing_1.6.3_amd64.deb  # Debian / Ubuntu（别用 dpkg -i：不会自动装依赖）
 sudo dnf install dist/voice-typing-1.6.3-1.x86_64.rpm  # Fedora / RHEL
 chmod +x dist/VoiceType-1.6.3-x86_64.AppImage && ./dist/VoiceType-*.AppImage
 ```
@@ -280,6 +295,8 @@ gh release create v1.4.1 voice-typing_1.4.1_amd64.deb \
 
 ## 版本历史
 
+- **v1.6.6**（开发中）：界面强调色 + 托盘 / 窗口图标跟随头像颜色 + 单击浮窗头像开始 / 结束语音输入 + 首页统计数字过万显示「万」
+- **v1.6.5**（未单独发布）：Grok 风格浮窗（原生表情头像 + 自适应音波 + 聊天气泡 + ✕ 取消）+ 设置界面重做 + 词典导入导出 + 头像颜色；去掉 QtWebEngine 依赖
 - **v1.6.4**（2026-10-08）：快捷键新增「按一下开始、再按一下结束」切换模式 + 首页 Hero 横幅 + 浮窗晕染外观 + 词典页布局调整
 - **v1.6.3**（2026-09-28）：取消默认快捷键（首次运行录制）+ 词库全部词条作火山热词 + 别名替换忽略大小写
 - **v1.6.2**（2026-09-20）：新版本检测提示 + 实时润色缓存过期修复 + 失败不再静默

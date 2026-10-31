@@ -26,6 +26,7 @@ class _Stub:
 
     def __init__(self, config):
         self._config = config
+        self._session = 0
         self._cached_polished_text = ""
         self._polish_source_text = ""
         self.emitted = []

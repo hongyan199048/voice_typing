@@ -3,7 +3,7 @@ Version: 0.0.0-placeholder
 Section: utils
 Priority: optional
 Architecture: amd64
-Depends: python3 (>= 3.10), python3-pyqt5, python3-pyaudio, xclip, xdotool
+Depends: python3 (>= 3.10), python3-pyqt5, libqt5svg5, python3-pyaudio, xclip, xdotool
 Maintainer: hongyan199048 <hongyan199048@example.com>
 Homepage: https://github.com/hongyan199048/voice_typing
 Description: 实时语音转文字桌面应用

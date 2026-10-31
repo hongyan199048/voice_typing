@@ -11,7 +11,8 @@ DEFAULT_CONFIG = {
     "alibaba_api_key": "",          # 阿里云 DashScope API Key（ASR + 润色共用）
     "volc_asr_api_key": "",         # 豆包语音控制台 API Key（X-Api-Key，与方舟 Key 独立）
     "volc_asr_resource_id": "volc.seedasr.sauc.duration",  # 豆包流式语音识别 2.0 小时版
-    "overlay_style": "aurora",      # 浮窗外观：glass / minimal / neon / aurora（晕染）
+    "avatar_color": "#14C16E",      # 头像 + 浮窗音波颜色（设置页「外观」）
+    "overlay_chat": False,          # 浮窗聊天开关：开则文字显示在主胶囊上方的文字框
     "hotkey": [],                      # 无默认快捷键，首次运行由用户在「设置」中录制
     "hotkey_mode": "hold",          # 触发方式：hold 按住说话 / toggle 按一下开始、再按一下结束
     "first_run": True,

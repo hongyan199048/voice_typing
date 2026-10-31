@@ -1,19 +1,28 @@
-"""暗黑主题 QSS 样式表 — 参考 Typeplus / 豆包语音输入法的克制设置页风格
+"""浅色主题 QSS 样式表 — 与屏幕下方的 Grok 风格浮窗同一套视觉语言
 
 层次只用颜色和字重区分，字号严格遵守 font_sizes.md 的三档体系（21/16/10pt）。
-色板：
-    #0a0a0a 侧栏   #0d0d0d 页面   #141414 卡片   #1c1c1c 控件
-    #f0f0f0 主文字 #8a8a8a 次要   #666666 占位
-强调色取自宣传视频：琥珀 #F7A035 → 橙 #F26A2A → 玫红 #E8458B 三色晕染。
-色块（按钮、选中项、勾选框）用 MESH 渐变；细描边、焦点框用实色橙。
-绿色只保留给「就绪 / 已保存」这类状态语义，红色只给录音与错误。
+色板（与浮窗一致）：
+    #F5F6F7 页面底   #FFFFFF 卡片 / 侧栏   #F3F4F5 输入控件   #F1F1F1 次要按钮
+    #1F1F1F 主文字   #6B6B6B 次要         #A0A0A0 占位       #ECEDEF 描边
+强调色：默认是浮窗头像与音波的绿 #14C16E（深一档作文字，淡一档作选中底），跟随设置页「头像颜色」，
+由 set_accent() 整体换掉。
+红 #E32D34 只给危险操作与错误。按钮、输入框、导航项一律胶囊（圆角 18：QSS 圆角超过控件半高会整个失效，
+高约 38–40 的控件取 18 最稳），卡片圆角 20。
 """
 
-from PyQt5.QtGui import QColor, QLinearGradient, QPalette
-from PyQt5.QtWidgets import QLineEdit
+import os
 
-MESH_COLORS = ("#F7A035", "#F26A2A", "#E8458B")
-PLACEHOLDER_COLOR = "#666666"
+from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtWidgets import QApplication, QLineEdit
+
+PLACEHOLDER_COLOR = "#A0A0A0"
+
+GREEN = "#14C16E"
+GREEN_TEXT = "#0E9F5A"
+GREEN_TINT = "#E8F8EF"
+RED = "#E32D34"
+
+_RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources")
 
 
 def apply_placeholder_color(root):
@@ -28,197 +37,188 @@ def apply_placeholder_color(root):
     for edit in root.findChildren(QLineEdit):
         edit.ensurePolished()
         edit.setPalette(palette)
-_MESH = ("qlineargradient(x1:0, y1:0, x2:1, y2:1, "
-         "stop:0 #F7A035, stop:0.5 #F26A2A, stop:1 #E8458B)")
 
 
-def mesh_gradient(rect):
-    """三色晕染沿 rect 对角线铺开，供 QPainter 自绘部件使用"""
-    grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-    for pos, color in zip((0.0, 0.5, 1.0), MESH_COLORS):
-        grad.setColorAt(pos, QColor(color))
-    return grad
-
-
-DARK_STYLE = """
+_APP_STYLE = """
 /* 全局 */
 QWidget {
-    background-color: #0d0d0d;
-    color: #f0f0f0;
+    background-color: #F5F6F7;
+    color: #1F1F1F;
     font-size: 10pt;
 }
 
-/* 输入框 */
+/* 输入框：浅灰胶囊，聚焦变白 + 绿描边 */
 QLineEdit {
-    background: #1c1c1c;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 9px 13px;
-    color: #f0f0f0;
-    selection-background-color: #F26A2A;
-    selection-color: #0d0d0d;
+    background: #F3F4F5;
+    border: 1px solid #F3F4F5;
+    border-radius: 18px;
+    padding: 9px 16px;
+    color: #1F1F1F;
+    selection-background-color: GREEN;
+    selection-color: #FFFFFF;
 }
 QLineEdit:hover {
-    border-color: #3a3a3a;
+    border-color: #E3E5E8;
 }
 QLineEdit:focus {
-    border-color: #F26A2A;
-    background: #202020;
+    border-color: GREEN;
+    background: #FFFFFF;
 }
 
-/* 按钮 */
+/* 按钮：全圆角胶囊。默认 = 浮窗同款浅灰圆按钮 */
 QPushButton {
-    background: #1c1c1c;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 8px 18px;
-    color: #e4e4e4;
+    background: #F1F1F1;
+    border: none;
+    border-radius: 18px;
+    padding: 9px 20px;
+    color: #1F1F1F;
     font-weight: 500;
 }
 QPushButton:hover {
-    background: #242424;
-    border-color: #3a3a3a;
+    background: #E6E6E6;
 }
 QPushButton:pressed {
-    background: #181818;
+    background: #DADADA;
+}
+QPushButton:disabled {
+    background: #F3F4F5;
+    color: #B8BCC2;
 }
 QPushButton#accent {
-    background: MESH;
-    color: #1a0b05;
-    border: 1px solid transparent;
+    background: GREEN;
+    color: #FFFFFF;
     font-weight: bold;
 }
 QPushButton#accent:hover {
-    border-color: rgba(255, 255, 255, 110);
+    background: GREEN_HOVER;
 }
 QPushButton#accent:pressed {
-    border-color: rgba(0, 0, 0, 90);
+    background: GREEN_PRESSED;
 }
 QPushButton#danger {
-    background: transparent;
-    border: 1px solid #3a2020;
-    color: #d16a6a;
+    background: #FDECEC;
+    color: RED;
 }
 QPushButton#danger:hover {
-    background: #2a1616;
-    border-color: #ef4444;
-    color: #ef4444;
+    background: #FAD9D9;
+}
+QPushButton#danger:disabled {
+    background: #F3F4F5;
+    color: #B8BCC2;
 }
 
-/* 侧边导航按钮 — 选中时左侧晕染色条 */
+/* 侧边导航：胶囊，选中淡绿底 + 绿字 */
 QPushButton#nav-btn {
     background: transparent;
     border: none;
-    border-left: 2px solid transparent;
-    border-radius: 0;
-    padding: 10px 14px;
+    border-radius: 18px;
+    padding: 10px 18px;
     text-align: left;
     font-weight: 500;
-    color: #8a8a8a;
+    color: #6B6B6B;
 }
 QPushButton#nav-btn:hover {
-    background: #151515;
-    color: #d8d8d8;
+    background: #F3F4F5;
+    color: #1F1F1F;
 }
 QPushButton#nav-btn[active="true"] {
-    background: #221510;
-    border-left: 2px solid qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #F7A035, stop:0.5 #F26A2A, stop:1 #E8458B);
-    color: #f0f0f0;
+    background: GREEN_TINT;
+    color: GREEN_TEXT;
     font-weight: bold;
 }
 
 /* 下拉框 */
 QComboBox {
-    background: #1c1c1c;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 9px 34px 9px 13px;
-    color: #f0f0f0;
+    background: #F3F4F5;
+    border: 1px solid #F3F4F5;
+    border-radius: 18px;
+    padding: 9px 36px 9px 16px;
+    color: #1F1F1F;
     min-height: 18px;
     outline: none;
 }
-QComboBox:hover { border-color: #3a3a3a; background: #202020; }
-QComboBox:focus { border-color: #F26A2A; }
+QComboBox:hover { border-color: #E3E5E8; }
+QComboBox:focus { border-color: GREEN; background: #FFFFFF; }
 QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
-    width: 28px;
+    width: 30px;
     border: none;
 }
 QComboBox::down-arrow {
-    width: 14px;
-    height: 14px;
+    image: url(RES/arrow-down.svg);
+    width: 16px;
+    height: 16px;
 }
 /* 下拉弹出层 — 容器 + 视图 */
 QComboBox QAbstractItemView,
 QComboBox QListView {
-    background-color: #1c1c1c;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 5px;
+    background-color: #FFFFFF;
+    border: 1px solid #ECEDEF;
+    border-radius: 16px;
+    padding: 6px;
     margin: 0;
     outline: none;
-    color: #f0f0f0;
-    selection-background-color: MESH;
-    selection-color: #1a0b05;
+    color: #1F1F1F;
+    selection-background-color: GREEN_TINT;
+    selection-color: GREEN_TEXT;
     show-decoration-selected: 1;
 }
 QComboBox QAbstractItemView::item,
 QComboBox QListView::item {
     background-color: transparent;
-    padding: 9px 12px;
+    padding: 9px 14px;
     min-height: 32px;
-    color: #f0f0f0;
-    border-radius: 7px;
+    color: #1F1F1F;
+    border-radius: 12px;
     margin: 1px 0;
 }
 QComboBox QAbstractItemView::item:selected,
 QComboBox QListView::item:selected {
-    background-color: MESH;
-    color: #1a0b05;
+    background-color: GREEN_TINT;
+    color: GREEN_TEXT;
 }
 QComboBox QAbstractItemView::item:hover,
 QComboBox QListView::item:hover {
-    background-color: #262626;
-    color: #f0f0f0;
+    background-color: #F3F4F5;
+    color: #1F1F1F;
 }
 
 /* 进度条 */
 QProgressBar {
     border: none;
     border-radius: 4px;
-    background: #1c1c1c;
+    background: #ECEDEF;
     text-align: center;
-    color: #f0f0f0;
+    color: #1F1F1F;
     height: 6px;
     font-size: 10pt;
 }
 QProgressBar::chunk {
-    background: MESH;
+    background: GREEN;
     border-radius: 4px;
 }
 
-/* 分组卡片 — 标题在卡片内部左上角 */
+/* 分组卡片：白底大圆角，标题在卡片内部左上角 */
 QGroupBox {
-    border: 1px solid #1e1e1e;
-    border-radius: 14px;
-    background: #141414;
+    border: 1px solid #ECEDEF;
+    border-radius: 20px;
+    background: #FFFFFF;
     margin-top: 0;
-    padding: 40px 16px 16px 16px;
+    padding: 44px 20px 20px 20px;
     font-weight: bold;
     font-size: 10pt;
 }
 QGroupBox::title {
     subcontrol-origin: padding;
     subcontrol-position: top left;
-    left: 18px;
-    top: 16px;
+    left: 22px;
+    top: 18px;
     padding: 0;
-    color: #f0f0f0;
+    color: #1F1F1F;
 }
 
-/* 卡片内的布局容器：透明，避免盖出比卡片更暗的色带 */
+/* 卡片内的布局容器：透明，避免盖出页面底色的色带 */
 QWidget#field, QWidget#input-row {
     background: transparent;
 }
@@ -226,157 +226,176 @@ QWidget#field, QWidget#input-row {
 /* 复选框 */
 QCheckBox, QRadioButton {
     background: transparent;
-    spacing: 9px;
-    color: #e4e4e4;
+    spacing: 10px;
+    color: #1F1F1F;
     padding: 3px 0;
 }
-QCheckBox:hover, QRadioButton:hover {
-    color: #f0f0f0;
-}
 QCheckBox::indicator {
-    width: 17px;
-    height: 17px;
-    border: 1px solid #3a3a3a;
-    border-radius: 5px;
-    background: #1c1c1c;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #CFD2D6;
+    border-radius: 6px;
+    background: #FFFFFF;
 }
 QCheckBox::indicator:hover {
-    border-color: #F26A2A;
+    border-color: GREEN;
 }
 QCheckBox::indicator:checked {
-    background: MESH;
-    border-color: #F26A2A;
-    image: url(voice_typing/ui/resources/checkmark.svg);
+    background: GREEN;
+    border-color: GREEN;
+    image: url(RES/checkmark.svg);
 }
 
-/* 单选按钮 */
+/* 单选按钮：选中 = 绿环 + 白芯 */
 QRadioButton::indicator {
-    width: 17px;
-    height: 17px;
-    border: 1px solid #3a3a3a;
-    border-radius: 9px;
-    background: #1c1c1c;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #CFD2D6;
+    border-radius: 10px;
+    background: #FFFFFF;
 }
 QRadioButton::indicator:hover {
-    border-color: #F26A2A;
+    border-color: GREEN;
 }
 QRadioButton::indicator:checked {
-    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
-                                fx:0.5, fy:0.5,
-                                stop:0 #1a0b05, stop:0.45 #1a0b05,
-                                stop:0.5 #F7A035, stop:1 #E8458B);
-    border-color: #F26A2A;
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                                stop:0 #FFFFFF, stop:0.38 #FFFFFF,
+                                stop:0.42 GREEN, stop:1 GREEN);
+    border-color: GREEN;
 }
 
 /* 标签 */
 QLabel {
     background: transparent;
-    color: #f0f0f0;
+    color: #1F1F1F;
 }
 /* 页面标题 */
 QLabel#page-title {
     font-size: 16pt;
     font-weight: bold;
-    color: #f0f0f0;
+    color: #1F1F1F;
 }
-/* 设置项标题 */
+/* 设置项标题：常规字重，与加粗的卡片标题拉开层级 */
 QLabel#field-label {
-    color: #e4e4e4;
-    font-weight: 500;
+    color: #1F1F1F;
+    font-weight: normal;
 }
 /* 设置项说明 / 次要信息 */
 QLabel#subtitle, QLabel#field-hint {
-    color: #8a8a8a;
+    color: #6B6B6B;
     font-size: 10pt;
 }
 QLabel#status {
-    color: #22c55e;
+    color: GREEN_TEXT;
     font-size: 10pt;
 }
 QLabel#error {
-    color: #ef4444;
+    color: RED;
     font-size: 10pt;
 }
 
-/* 统计卡片数值 — 统一白色，晕染色只留给强调项 */
+/* 统计卡片数值 — 统一深色，绿色只留给强调项 */
 QLabel#stat-value {
     font-size: 21pt;
     font-weight: bold;
-    color: #f0f0f0;
+    color: #1F1F1F;
 }
 QLabel#stat-value[accent="true"] {
-    color: #F26A2A;  /* QSS 渐变用作文字色会退化成末端色，文字一律用实色橙 */
+    color: GREEN_TEXT;
 }
 QLabel#stat-label {
     font-size: 10pt;
-    color: #8a8a8a;
+    color: #6B6B6B;
 }
 
 /* 分割线 */
 QFrame#separator, QFrame#divider {
     background: transparent;
     border: none;
-    border-top: 1px solid #242424;
+    border-top: 1px solid #F0F1F3;
     max-height: 1px;
 }
 
 /* 侧边栏 */
 QWidget#sidebar {
-    background: #0a0a0a;
-    border-right: 1px solid #171717;
+    background: #FFFFFF;
+    border-right: 1px solid #ECEDEF;
+}
+/* 侧边栏底部的引擎状态胶囊 */
+QWidget#status-chip {
+    background: #F3F4F5;
+    border-radius: 15px;
+}
+QWidget#status-chip QLabel {
+    color: #6B6B6B;
 }
 
-/* 列表 */
+/* 列表：容器透明，每一项由 CardDelegate 画成白色圆角卡片 */
 QListWidget {
     background: transparent;
     border: none;
     outline: none;
 }
-QListWidget::item {
-    background: #161616;
-    border: 1px solid #1e1e1e;
-    border-radius: 10px;
-    padding: 10px 13px;
-    margin: 3px 0;
-    color: #e4e4e4;
-}
-QListWidget::item:hover {
-    background: #1c1c1c;
-    border-color: #2a2a2a;
-}
-QListWidget::item:selected {
-    background: #221510;
-    border-color: #F26A2A;
-    color: #f0f0f0;
-}
 
-/* 滚动条 — 不滑动时隐藏，hover 时出现 */
+/* 滚动条 */
 QScrollBar:vertical {
     background: transparent;
     width: 6px;
     margin: 0;
 }
 QScrollBar::handle:vertical {
-    background: rgba(60, 60, 60, 140);
+    background: rgba(0, 0, 0, 40);
     border-radius: 3px;
     min-height: 30px;
 }
 QScrollBar::handle:vertical:hover,
 QScrollBar:vertical:hover QScrollBar::handle:vertical {
-    background: rgba(90, 90, 90, 220);
+    background: rgba(0, 0, 0, 80);
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 
 /* 工具提示 */
 QToolTip {
-    background: #1c1c1c;
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
+    background: #FFFFFF;
+    border: 1px solid #ECEDEF;
+    border-radius: 10px;
     padding: 6px 10px;
-    color: #f0f0f0;
+    color: #1F1F1F;
     font-size: 10pt;
 }
-""".replace("MESH", _MESH)
+"""
+
+
+def accent_shades(color):
+    """强调色 → (主色, 文字色, 选中底色, 悬停色)。文字和悬停取深一档，选中底是主色 10% 混白"""
+    c = QColor(color)
+    tint = QColor(*(round(255 - (255 - v) * 0.1) for v in c.getRgb()[:3]))
+    return c.name(), c.darker(125).name(), tint.name(), c.darker(112).name()
+
+
+_accent = accent_shades(GREEN)
+
+
+def accent():
+    """当前强调色 (主色, 文字色, 选中底色, 悬停色)；自绘控件在 paintEvent 里取"""
+    return _accent
+
+
+def app_style():
+    main, text, tint, hover = _accent
+    return (_APP_STYLE.replace("GREEN_TINT", tint).replace("GREEN_TEXT", text)
+            .replace("GREEN_HOVER", hover).replace("GREEN_PRESSED", text)
+            .replace("GREEN", main).replace("RED", RED).replace("RES", _RES))
+
+
+def set_accent(color):
+    """全局换强调色：重设整个应用的样式表（QSS 控件立即跟着变），自绘控件需各自 update()"""
+    global _accent
+    _accent = accent_shades(color)
+    QApplication.instance().setStyleSheet(app_style() + OVERLAY_STYLE)
+
+
+APP_STYLE = app_style()
 
 OVERLAY_STYLE = """
 QWidget#overlay {

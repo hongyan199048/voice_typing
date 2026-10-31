@@ -9,6 +9,7 @@ BuildArch:      x86_64
 # 纯 Python 依赖已 vendor 进 /usr/share/voice-typing/vendor，此处只声明系统包
 Requires:       python3 >= 3.10
 Requires:       python3-qt5
+Requires:       qt5-qtsvg
 Requires:       python3-pyaudio
 Requires:       xclip
 Requires:       xdotool

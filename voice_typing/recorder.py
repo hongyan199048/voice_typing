@@ -1,19 +1,33 @@
 """录音 + ASR 控制器"""
 
+import math
 import queue
 import threading
+from array import array
 
 import pyaudio
 from PyQt5.QtCore import pyqtSignal, QObject, Qt, QMetaObject, Q_ARG
 
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 3200  # 200ms
+# 音量 → 0..1 的映射区间（dBFS）。麦克风增益各异，偏小/偏大就调这两个数
+LEVEL_FLOOR_DB = -50.0
+LEVEL_CEIL_DB = -15.0
+
+
+def _level(pcm: bytes) -> float:
+    """16bit PCM 的响度，按 dBFS 线性映射到 0..1"""
+    samples = array("h", pcm)
+    rms = math.sqrt(sum(x * x for x in samples) / max(1, len(samples)))
+    db = 20 * math.log10(rms / 32768 + 1e-9)
+    return min(1.0, max(0.0, (db - LEVEL_FLOOR_DB) / (LEVEL_CEIL_DB - LEVEL_FLOOR_DB)))
 
 
 class Recorder(QObject):
     """录音 + ASR 控制器，在主线程中用信号通信"""
 
     text_update = pyqtSignal(str)
+    level = pyqtSignal(float)  # 每 100ms 一次实时音量，驱动浮窗波形
 
     def __init__(self, engine, app_obj=None):
         super().__init__()
@@ -57,6 +71,9 @@ class Recorder(QObject):
             try:
                 data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
                 self._audio_queue.put(data)
+                half = len(data) // 2
+                self.level.emit(_level(data[:half]))
+                self.level.emit(_level(data[half:]))
             except Exception:
                 break
 
